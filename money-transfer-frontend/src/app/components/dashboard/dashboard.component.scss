@@ -3,11 +3,12 @@
   display: flex;
   min-height: 100vh;
   font-family: 'Segoe UI', sans-serif;
+  max-width: screen;
 
   .sidebar {
     width: 220px;
     background-color: #1f2937;
-    color: #fff;
+    color: #a23232;
     padding: 2rem;
     nav a {
       display: block;
@@ -28,8 +29,10 @@
     flex: 1;
     background-color: #f3f4f6;
     padding: 2rem;
-    display: grid;
     gap: 2rem;
+    max-width: 750px;
+
+    margin: 0 auto;
 
     .card {
       background-color: #fff;
@@ -175,6 +178,28 @@
     }
   }
 
+
+  @media (min-width: 768px) {
+
+    .dashboard {
+      padding: 20px;
+      max-width: 500px;
+
+      .sidebar{
+        display: none;
+        padding: 10px;
+      }
+
+      .main {
+        max-width: cr;
+        padding: 20px;
+        display: grid;
+
+      }
+    }
+    
+  }
+
     /* Remove arrows in Chrome, Safari, Edge, Opera */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -187,3 +212,5 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 }
+
+
