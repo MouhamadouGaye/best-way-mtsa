@@ -1,3 +1,9 @@
 CREATE DATABASE moneytransfer;
 CREATE USER moneyuser WITH ENCRYPTED PASSWORD 'money_pass';
 GRANT ALL PRIVILEGES ON DATABASE moneytransfer TO moneyuser;
+CREATE TABLE country_codes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    prefix VARCHAR(10) NOT NULL,
+    code VARCHAR(5) NOT NULL,
+    name VARCHAR(100)
+);

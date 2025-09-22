@@ -77,7 +77,9 @@ export class LoginComponent {
     //   },
     // });
     this.authService.login(this.email, this.password).subscribe({
-      next: () => {
+      next: (res) => {
+        console.log(JSON.stringify(res, null, 2));
+
         this.success = 'Login successful! Redirecting...';
         setTimeout(() => this.router.navigate(['/dashboard']), 500);
       },

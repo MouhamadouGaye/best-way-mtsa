@@ -72,6 +72,7 @@ public class AuthController {
             response.addCookie(cookie);
 
             return ResponseEntity.ok().body(Map.of("message", "Login successful"));
+
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }

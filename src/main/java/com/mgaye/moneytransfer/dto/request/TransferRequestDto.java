@@ -7,5 +7,6 @@ import java.math.BigDecimal;
 public class TransferRequestDto {
     private Long fromUserId;
     private Long toUserId;
+    private Long beneficiaryId; // optionnel
     private BigDecimal amount;
 }

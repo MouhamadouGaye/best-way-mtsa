@@ -35,6 +35,10 @@ public class Transfer {
     @Column(nullable = false)
     private TransferStatus status;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "beneficiary_id")
+    private Beneficiary beneficiary; // optionnel
+
     public enum TransferStatus {
         PENDING, COMPLETED, FAILED
     }
