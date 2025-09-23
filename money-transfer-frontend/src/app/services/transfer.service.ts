@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
 import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { BeneficiaryDTO } from '../types/BeneficiaryDTO';
 
 // export class TransferService {
 //   constructor(private api: ApiService, private http: HttpClient) {}
@@ -55,25 +56,55 @@ export class TransferService {
   //   );
   // }
 
-  addBeneficiary(beneficiary: any) {
-    return this.api.post('/beneficiaries', beneficiary);
+  // addBeneficiary(beneficiary: any) {
+  //   return this.api.post('/beneficiaries', beneficiary);
+  // }
+
+  //   // } this because We do not ask the userId
+  // getBeneficiaries() {
+  //   return this.api.get<any[]>('/beneficiaries');
+  // }
+
+  // // ------------------------------
+  // // Créer un transfert (interne ou externe) avec infos carte
+  // // ------------------------------
+  // createTransfer(
+  //   fromUserId: number,
+  //   toUserId: number | null,
+  //   beneficiaryId: number | null,
+  //   amount: number | null,
+  //   cardInfo?: CardInfo // optionnel pour test / paiement futur
+  // ): Observable<any> {
+  //   const payload: any = { fromUserId, toUserId, beneficiaryId, amount };
+  //   if (cardInfo) {
+  //     payload.cardInfo = cardInfo;
+  //   }
+  //   return this.api.post('/transfers', payload);
+  // }
+
+  // ✅ Get only current user's beneficiaries
+  getBeneficiaries(): Observable<BeneficiaryDTO[]> {
+    return this.api.get<BeneficiaryDTO[]>('/beneficiaries');
   }
 
-  // ------------------------------
-  // Créer un transfert (interne ou externe) avec infos carte
-  // ------------------------------
+  // ✅ Add a new beneficiary
+  addBeneficiary(b: Partial<BeneficiaryDTO>): Observable<BeneficiaryDTO> {
+    return this.api.post<BeneficiaryDTO>('/beneficiaries', b);
+  }
+
+  // ✅ Send transfer (you had this already, keeping it for completeness)
   createTransfer(
-    fromUserId: number,
+    fromUserId: number | null,
+    fromAccount: any,
     toUserId: number | null,
-    beneficiaryId: number | null,
-    amount: number | null,
-    cardInfo?: CardInfo // optionnel pour test / paiement futur
-  ): Observable<any> {
-    const payload: any = { fromUserId, toUserId, beneficiaryId, amount };
-    if (cardInfo) {
-      payload.cardInfo = cardInfo;
-    }
-    return this.api.post('/transfers', payload);
+    amount: number | null
+  ) {
+    return this.api.post('/transfers', {
+      fromUserId,
+      fromAccount,
+      toUserId,
+      amount,
+    });
   }
 
   // ------------------------------
@@ -94,10 +125,6 @@ export class TransferService {
   //     `http://localhost:8080/api/beneficiaries/user/${userId}`,
   //     { withCredentials: true }
   //   );
-  // } this because We do not ask the userId
-  getBeneficiaries() {
-    return this.api.get<any[]>('/beneficiaries');
-  }
 
   // ------------------------------
   // Entrées de transactions

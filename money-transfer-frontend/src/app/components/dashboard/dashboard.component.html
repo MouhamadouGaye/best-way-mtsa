@@ -30,9 +30,13 @@
           (input)="filterCountries()"
           (focus)="onDropdownMenu('country', $event)"
         />
-        <ul *ngIf="openDropdown === 'country' && filteredCountries.length">
+        <ul *ngIf="openDropdown === 'country' && filteredCountries.length > 0">
           <li *ngFor="let c of filteredCountries" (click)="chooseCountry(c)">
-            {{ c.flag }} {{ c.name }} — {{ c.currency }}
+            <div class="country-dropdown">
+              <span class="flag">{{ c.flag }}</span>
+              <span class="name"> {{ c.name }} </span>
+              <span class="currency">{{ c.currency }}</span>
+            </div>
           </li>
         </ul>
       </div>
@@ -53,7 +57,11 @@
             *ngFor="let b of filteredBeneficiaries"
             (click)="chooseBeneficiary(b)"
           >
-            {{ b.fullName }} ({{ b.phoneNumber }})
+            <div class="beneficiary-dropdown">
+              <span class="flag">{{ b.flag }}</span>
+              <span class="name"> {{ b.fullName }} </span>
+              <span class="phone-number">{{ b.phoneNumber }}</span>
+            </div>
           </li>
         </ul>
       </div>
@@ -67,25 +75,39 @@
         + Add Beneficiary
       </button>
 
-      <div *ngIf="showAddBeneficiary" class="add-beneficiary-form">
-        <input
-          type="text"
-          placeholder="Full Name"
-          [(ngModel)]="newBeneficiary.fullName"
-        />
-        <input
-          type="text"
-          placeholder="Phone Number"
-          [(ngModel)]="newBeneficiary.phoneNumber"
-        />
-        <input
-          type="email"
-          placeholder="Email (optional)"
-          [(ngModel)]="newBeneficiary.email"
-        />
-        <button type="button" (click)="addBeneficiary()" [disabled]="loading">
-          Add
-        </button>
+      <div
+        class="beneficiary-overlay"
+        *ngIf="showAddBeneficiary"
+        (click)="closeModal()"
+      >
+        <div class="form-base" (click)="$event.stopPropagation()">
+          <h3>Add Beneficiary</h3>
+          <span class="del-modal" (click)="closeModal()">⨉</span>
+          <div class="add-beneficiary-form">
+            <input
+              type="text"
+              placeholder="Full Name"
+              [(ngModel)]="newBeneficiary.fullName"
+            />
+            <input
+              type="text"
+              placeholder="Phone Number"
+              [(ngModel)]="newBeneficiary.phoneNumber"
+            />
+            <input
+              type="email"
+              placeholder="Email (optional)"
+              [(ngModel)]="newBeneficiary.email"
+            />
+            <button
+              type="button"
+              (click)="addBeneficiary()"
+              [disabled]="loading"
+            >
+              Add
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Amount inputs -->

@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { TransferService } from '../../services/transfer.service';
 import { AuthService } from '../../services/auth.service';
 import { countries, rates, countryPrefixes } from '../../data';
+import { BeneficiaryDTO } from '../../types/BeneficiaryDTO';
 
 @Component({
   selector: 'app-dashboard',
@@ -42,13 +43,18 @@ export class DashboardComponent implements OnInit {
   selectedBeneficiary: string = '';
   toUserId: number | null = null;
   showAddBeneficiary: boolean = false;
-  newBeneficiary = { fullName: '', phoneNumber: '', email: '' };
+  newBeneficiary: Partial<BeneficiaryDTO> = {
+    fullName: '',
+    phoneNumber: '',
+    email: '',
+  };
 
   // ------------------------------
   // Country
   // ------------------------------
   selectedCountry: string = '';
   receiverCurrency: string = '';
+  flagCountry: string = '';
 
   // ------------------------------
   // Amounts
@@ -132,44 +138,11 @@ export class DashboardComponent implements OnInit {
   }
 
   chooseBeneficiary(b: any) {
-    this.selectedBeneficiary = `${b.fullName} (${b.phoneNumber})`;
+    this.selectedBeneficiary = `${b.flag} ${b.fullName} (${b.phoneNumber})`;
     this.toUserId = b.id;
     this.filteredBeneficiaries = [];
     this.openDropdown = null;
   }
-
-  // addBeneficiary() {
-  //   this.error = '';
-  //   this.success = '';
-
-  //   if (!this.newBeneficiary.fullName || !this.newBeneficiary.phoneNumber) {
-  //     this.error = 'Full name and phone number are required';
-  //     return;
-  //   }
-
-  //   // Auto-detect prefix if missing
-  //   if (!this.newBeneficiary.phoneNumber.startsWith('+')) {
-  //     const defaultPrefix = '+33';
-  //     this.newBeneficiary.phoneNumber =
-  //       defaultPrefix + this.newBeneficiary.phoneNumber;
-  //   }
-
-  //   this.loading = true;
-  //   this.transferService.addBeneficiary(this.newBeneficiary).subscribe({
-  //     next: (b) => {
-  //       this.beneficiaries.push(b);
-  //       this.chooseBeneficiary(b);
-  //       this.newBeneficiary = { fullName: '', phoneNumber: '', email: '' };
-  //       this.showAddBeneficiary = false;
-  //       this.success = 'Beneficiary added successfully!';
-  //       this.loading = false;
-  //     },
-  //     error: (err) => {
-  //       this.error = err.error?.message || 'Failed to add beneficiary';
-  //       this.loading = false;
-  //     },
-  //   });
-  // }
 
   addBeneficiary() {
     this.error = '';
@@ -186,12 +159,18 @@ export class DashboardComponent implements OnInit {
       .replace(/\s+/g, '')
       .replace(/-/g, '');
 
+    // end test
+
     // Auto-detect prefix from known countryPrefixes
     const matchedPrefix = this.countryPrefixes.find((c) =>
       phone.startsWith(c.prefix.replace('+', ''))
     );
+    console.log('matchedPrefix: WITH "+ ' + matchedPrefix);
+    console.log('matchedPrefix WITH ",": ', matchedPrefix);
+
     if (matchedPrefix) {
-      if (!phone.startsWith('+')) phone = matchedPrefix.prefix + phone;
+      phone = '+' + phone;
+      // if (!phone.startsWith('+')) phone = matchedPrefix.prefix + phone;
     } else {
       const fallbackPrefix = '+33'; // France default
       phone = fallbackPrefix + phone;
@@ -211,7 +190,6 @@ export class DashboardComponent implements OnInit {
         next: (b) => {
           this.beneficiaries.push(b);
           this.chooseBeneficiary(b);
-
           this.newBeneficiary = { fullName: '', phoneNumber: '', email: '' };
           this.showAddBeneficiary = false;
           this.success = 'Beneficiary added successfully!';
@@ -229,12 +207,13 @@ export class DashboardComponent implements OnInit {
   // ------------------------------
   filterCountries() {
     const term = this.selectedCountry.toLowerCase();
-    this.filteredCountries = this.countries.filter((c) =>
+    this.filteredCountries = this.countryPrefixes.filter((c) =>
       c.name.toLowerCase().includes(term)
     );
   }
 
   chooseCountry(c: any) {
+    this.flagCountry = c.flag;
     this.selectedCountry = c.name;
     this.receiverCurrency = c.currency;
     this.updateConvertedAmount('sender');
@@ -335,8 +314,12 @@ export class DashboardComponent implements OnInit {
     event.stopPropagation();
     this.openDropdown = type;
 
-    if (type === 'country') this.filteredCountries = [...this.countries];
+    if (type === 'country') this.filteredCountries = [...this.countryPrefixes];
     if (type === 'beneficiary')
       this.filteredBeneficiaries = [...this.beneficiaries];
+  }
+
+  closeModal() {
+    this.showAddBeneficiary = false;
   }
 }
