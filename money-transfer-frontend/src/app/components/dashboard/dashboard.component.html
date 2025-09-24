@@ -159,7 +159,7 @@
       <h3>Recent Transfers</h3>
       <div *ngFor="let t of recentTransfers" class="history-item">
         <div class="left">
-          <span class="to">To: {{ t.recipientName }}</span>
+          <span class="to">|--> {{ t.recipientName }}</span>
           <span class="status" [ngClass]="t.status.toLowerCase()">{{
             t.status
           }}</span>

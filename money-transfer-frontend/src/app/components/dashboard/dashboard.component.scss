@@ -250,15 +250,31 @@
         padding: 0.5rem 0;
         border-bottom: 1px solid #e5e7eb;
         .status {
+          padding: 7px;
+          border-radius: 5px;
           &.completed {
+            background-color: rgba(1, 163, 1, 0.249);
+            font-size: small;
             color: #10b981;
           }
           &.pending {
+            background-color: #fbbe2437;
             color: #fbbf24;
           }
           &.failed {
+            background-color: #ef44443a;
             color: #ef4444;
           }
+        }
+
+        .left{
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          .to{
+            font-weight: bold;
+          }
+          
         }
       }
     }

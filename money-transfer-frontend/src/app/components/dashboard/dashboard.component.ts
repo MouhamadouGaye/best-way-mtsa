@@ -341,9 +341,6 @@ export class DashboardComponent implements OnInit {
 
   // for testing
   sendTransferTest() {
-    console.log('beneficiaryId: ', this.toBeneficiaryId);
-    console.log('AmountSender: ', this.amountSender);
-
     if (!this.toBeneficiaryId || !this.amountSender) {
       this.error = 'Please select a recipient and enter an amount';
       return;
