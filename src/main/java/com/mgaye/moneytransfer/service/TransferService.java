@@ -148,12 +148,87 @@ public class TransferService {
         this.beneficiaryRepository = beneficiaryRepository;
     }
 
+    // @Transactional
+    // public Transfer createTransfer(Long fromUserId, Long toUserId, Long
+    // beneficiaryId, BigDecimal amount) {
+    // User fromUser = userRepository.findById(fromUserId)
+    // .orElseThrow(() -> new RuntimeException("Sender not found"));
+
+    // if (fromUser.getBalance().compareTo(amount) < 0) {
+    // throw new RuntimeException("Insufficient balance");
+    // }
+
+    // // 🔴 Conflict: insufficient funds
+    // if (fromUser.getBalance().compareTo(amount) < 0) {
+    // throw new IllegalStateException("Insufficient balance");
+    // }
+
+    // Transfer.TransferBuilder transferBuilder = Transfer.builder()
+    // .fromUser(fromUser)
+    // .amount(amount)
+    // .status(Transfer.TransferStatus.COMPLETED)
+    // .createdAt(Instant.now());
+
+    // if (toUserId != null) {
+    // // ✅ Cas 1 : Transfert interne (User → User)
+    // // User toUser = userRepository.findById(toUserId)
+    // // .orElseThrow(() -> new RuntimeException("Recipient not found"));
+
+    // // ✅ Case 1: Internal transfer (User → User)
+    // User toUser = userRepository.findById(toUserId)
+    // .orElseThrow(() -> new IllegalArgumentException("Recipient not found"));
+
+    // // Débit / Crédit
+    // fromUser.setBalance(fromUser.getBalance().subtract(amount));
+    // toUser.setBalance(toUser.getBalance().add(amount));
+    // userRepository.save(fromUser);
+    // userRepository.save(toUser);
+
+    // Transfer transfer = transferBuilder.toUser(toUser).build();
+    // transferRepository.save(transfer);
+
+    // // Créer les deux entries (expéditeur + destinataire)
+    // addTransactionEntries(fromUser, toUser, transfer);
+
+    // return transfer;
+
+    // } else if (beneficiaryId != null) {
+    // // ✅ Cas 2 : Transfert externe (User → Beneficiary)
+    // // Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
+    // // .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
+    // Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
+    // .orElseThrow(() -> new IllegalArgumentException("Beneficiary not found"));
+
+    // // Débit uniquement
+    // fromUser.setBalance(fromUser.getBalance().subtract(amount));
+    // userRepository.save(fromUser);
+
+    // Transfer transfer = transferBuilder.beneficiary(beneficiary).build();
+    // transferRepository.save(transfer);
+
+    // // Créer une entry uniquement pour le sender
+    // addTransactionEntry(fromUser, transfer);
+
+    // return transfer;
+    // } else {
+    // throw new IllegalArgumentException("Either toUserId or beneficiaryId must be
+    // provided");
+    // }
+    // }
+
     @Transactional
-    public Transfer createTransfer(Long fromUserId, Long toUserId, Long beneficiaryId, BigDecimal amount) {
+    public Transfer createTransfer(
+            Long fromUserId,
+            Long toUserId,
+            Long beneficiaryId,
+            BigDecimal amount,
+            boolean fromCard) {
+
         User fromUser = userRepository.findById(fromUserId)
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
 
-        if (fromUser.getBalance().compareTo(amount) < 0) {
+        // Only check balance if NOT using card
+        if (!fromCard && fromUser.getBalance().compareTo(amount) < 0) {
             throw new RuntimeException("Insufficient balance");
         }
 
@@ -164,40 +239,57 @@ public class TransferService {
                 .createdAt(Instant.now());
 
         if (toUserId != null) {
-            // ✅ Cas 1 : Transfert interne (User → User)
+            // -------------------------
+            // Internal transfer
+            // -------------------------
             User toUser = userRepository.findById(toUserId)
                     .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
-            // Débit / Crédit
-            fromUser.setBalance(fromUser.getBalance().subtract(amount));
-            toUser.setBalance(toUser.getBalance().add(amount));
-            userRepository.save(fromUser);
-            userRepository.save(toUser);
+            if (!fromCard) {
+                fromUser.setBalance(fromUser.getBalance().subtract(amount));
+                toUser.setBalance(toUser.getBalance().add(amount));
+                userRepository.save(fromUser);
+                userRepository.save(toUser);
+            }
 
-            Transfer transfer = transferBuilder.toUser(toUser).build();
+            Transfer transfer = transferBuilder
+                    .toUser(toUser) // ✅ set internal recipient
+                    .beneficiary(null) // ✅ make sure beneficiary is null
+                    .build();
+
             transferRepository.save(transfer);
 
-            // Créer les deux entries (expéditeur + destinataire)
-            addTransactionEntries(fromUser, toUser, transfer);
+            if (!fromCard) {
+                addTransactionEntries(fromUser, toUser, transfer);
+            }
 
             return transfer;
 
         } else if (beneficiaryId != null) {
-            // ✅ Cas 2 : Transfert externe (User → Beneficiary)
+            // -------------------------
+            // External transfer
+            // -------------------------
             Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
                     .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
 
-            // Débit uniquement
-            fromUser.setBalance(fromUser.getBalance().subtract(amount));
-            userRepository.save(fromUser);
+            if (!fromCard) {
+                fromUser.setBalance(fromUser.getBalance().subtract(amount));
+                userRepository.save(fromUser);
+            }
 
-            Transfer transfer = transferBuilder.beneficiary(beneficiary).build();
+            Transfer transfer = transferBuilder
+                    .toUser(null) // ✅ clear toUser
+                    .beneficiary(beneficiary)
+                    .build();
+
             transferRepository.save(transfer);
 
-            // Créer une entry uniquement pour le sender
-            addTransactionEntry(fromUser, transfer);
+            if (!fromCard) {
+                addTransactionEntry(fromUser, transfer);
+            }
 
             return transfer;
+
         } else {
             throw new IllegalArgumentException("Either toUserId or beneficiaryId must be provided");
         }

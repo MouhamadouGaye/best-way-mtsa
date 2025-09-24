@@ -93,28 +93,62 @@ export class TransferService {
   }
 
   // ✅ Send transfer (you had this already, keeping it for completeness)
+  // createTransfer(
+  //   fromUserId: number | null,
+  //   fromAccount: any,
+  //   toUserId: number | null,
+  //   amount: number | null
+  // ) {
+  //   return this.api.post('/transfers', {
+  //     fromUserId,
+  //     fromAccount,
+  //     toUserId,
+  //     amount,
+  //   });
+  // }
+
   createTransfer(
-    fromUserId: number | null,
-    fromAccount: any,
-    toUserId: number | null,
-    amount: number | null
+    fromUserId: number, // sender
+    toUserId: number | null, // internal recipient
+    beneficiaryId: number | null, // external recipient
+    amount: number | null,
+    fromCard: boolean = true // true if paying via card
   ) {
     return this.api.post('/transfers', {
       fromUserId,
-      fromAccount,
       toUserId,
+      beneficiaryId,
       amount,
+      fromCard, // send flag to backend
     });
   }
+
+  // createTransfer(
+  //   toUserId: number | null,
+  //   beneficiaryId: number | null,
+  //   amount: number | null
+  // ) {
+  //   return this.api.post('/transfers', {
+  //     toUserId,
+  //     beneficiaryId,
+  //     amount,
+  //   });
+  // }
 
   // ------------------------------
   // Récupérer les transferts d’un utilisateur
   // ------------------------------
-  getTransfers(userId: number | null): Observable<any[]> {
-    return this.http.get<any[]>(
-      `http://localhost:8080/api/transfers/user/${userId}`,
-      { withCredentials: true }
-    );
+  // getTransfers(userId: number | null): Observable<any[]> {
+  //   return this.http.get<any[]>(
+  //     `http://localhost:8080/api/transfers/user/${userId}`,
+  //     { withCredentials: true }
+  //   );
+  // }
+
+  getTransfers(): Observable<any[]> {
+    return this.http.get<any[]>(`http://localhost:8080/api/transfers`, {
+      withCredentials: true,
+    });
   }
 
   // ------------------------------

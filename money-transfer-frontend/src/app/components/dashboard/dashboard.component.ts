@@ -41,7 +41,9 @@ export class DashboardComponent implements OnInit {
   // Beneficiary
   // ------------------------------
   selectedBeneficiary: string = '';
+  selectedBeneficiaryId: number | null = null;
   toUserId: number | null = null;
+  toBeneficiaryId: number | null = null;
   showAddBeneficiary: boolean = false;
   newBeneficiary: Partial<BeneficiaryDTO> = {
     fullName: '',
@@ -94,13 +96,28 @@ export class DashboardComponent implements OnInit {
   // ------------------------------
   // Load user info & recent transfers
   // ------------------------------
+  // loadUserData() {
+  //   this.authService.getCurrentUser().subscribe({
+  //     next: (user: any) => {
+  //       if (!user) return;
+  //       this.balance = user.balance;
+  //       this.senderCurrency = user.currency || 'USD';
+  //       this.loadTransfers(user.id);
+  //     },
+  //     error: (err) => {
+  //       this.error = 'Failed to load user info';
+  //       console.error(err);
+  //     },
+  //   });
+  // }
+
   loadUserData() {
     this.authService.getCurrentUser().subscribe({
       next: (user: any) => {
         if (!user) return;
         this.balance = user.balance;
         this.senderCurrency = user.currency || 'USD';
-        this.loadTransfers(user.id);
+        this.loadTransfers();
       },
       error: (err) => {
         this.error = 'Failed to load user info';
@@ -109,8 +126,17 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  loadTransfers(userId: number) {
-    this.transferService.getTransfers(userId).subscribe({
+  // loadTransfers(userId: number) {
+  //   this.transferService.getTransfers(userId).subscribe({
+  //     next: (transfers) => {
+  //       this.recentTransfers = transfers.slice(-5).reverse();
+  //     },
+  //     error: (err) => console.error(err),
+  //   });
+  // }
+
+  loadTransfers() {
+    this.transferService.getTransfers().subscribe({
       next: (transfers) => {
         this.recentTransfers = transfers.slice(-5).reverse();
       },
@@ -138,11 +164,27 @@ export class DashboardComponent implements OnInit {
   }
 
   chooseBeneficiary(b: any) {
-    this.selectedBeneficiary = `${b.flag} ${b.fullName} (${b.phoneNumber})`;
-    this.toUserId = b.id;
+    let phoneForFlag = b.phoneNumber;
+
+    const matches = this.countryPrefixes.find((c) =>
+      phoneForFlag.startsWith(c.prefix)
+    );
+    if (matches) phoneForFlag = matches.flag;
+
+    this.selectedBeneficiary = ` ${phoneForFlag} ${b.fullName} + (${b.phoneNumber})`;
+    // this.toUserId = b.id;
+    this.toBeneficiaryId = b.id;
     this.filteredBeneficiaries = [];
     this.openDropdown = null;
   }
+
+  // chooseBeneficiary(b: any) {
+  //   this.selectedBeneficiary = `${b.flag} ${b.fullName} (${b.phoneNumber})`;
+  //   this.selectedBeneficiaryId = b.id; // ✅ beneficiary.id goes here
+  //   this.toUserId = null; // clear internal transfer field
+  //   this.filteredBeneficiaries = [];
+  //   this.openDropdown = null;
+  // }
 
   addBeneficiary() {
     this.error = '';
@@ -247,16 +289,63 @@ export class DashboardComponent implements OnInit {
   // ------------------------------
   // Send transfer
   // ------------------------------
-  sendTransfer() {
-    if (!this.toUserId || !this.amountSender) return;
+  // sendTransfer() {
+  //   if (!this.toUserId || !this.amountSender) return;
 
-    if (
-      !this.cardInfo.cardNumber ||
-      !this.cardInfo.expiryMonth ||
-      !this.cardInfo.expiryYear ||
-      !this.cardInfo.cvv
-    ) {
-      this.error = 'Please fill in all card details';
+  //   if (
+  //     !this.cardInfo.cardNumber ||
+  //     !this.cardInfo.expiryMonth ||
+  //     !this.cardInfo.expiryYear ||
+  //     !this.cardInfo.cvv
+  //   ) {
+  //     this.error = 'Please fill in all card details';
+  //     return;
+  //   }
+
+  //   this.error = '';
+  //   this.success = '';
+  //   this.loading = true;
+
+  //   this.authService.getCurrentUser().subscribe({
+  //     next: (user: any) => {
+  //       if (!user) {
+  //         this.error = 'User not found';
+  //         this.loading = false;
+  //         return;
+  //       }
+
+  //       this.transferService
+  //         .createTransfer(
+  //           user.id,
+  //           this.selectedBeneficiaryId,
+  //           this.amountSender
+  //         )
+  //         .subscribe({
+  //           next: () => {
+  //             this.success = 'Transfer successful!';
+  //             this.loadUserData();
+  //             this.resetTransferForm();
+  //           },
+  //           error: (err) => {
+  //             this.error = err.error?.message || 'Transfer failed';
+  //             this.loading = false;
+  //           },
+  //         });
+  //     },
+  //     error: () => {
+  //       this.error = 'Failed to load current user';
+  //       this.loading = false;
+  //     },
+  //   });
+  // }
+
+  // for testing
+  sendTransferTest() {
+    console.log('beneficiaryId: ', this.toBeneficiaryId);
+    console.log('AmountSender: ', this.amountSender);
+
+    if (!this.toBeneficiaryId || !this.amountSender) {
+      this.error = 'Please select a recipient and enter an amount';
       return;
     }
 
@@ -271,9 +360,16 @@ export class DashboardComponent implements OnInit {
           this.loading = false;
           return;
         }
+        console.log('toUserId: ', user.id);
 
         this.transferService
-          .createTransfer(user.id, null, this.toUserId, this.amountSender)
+          .createTransfer(
+            user.id,
+            null,
+            this.toBeneficiaryId, // toBeneficiaryId
+            this.amountSender,
+            true // fromCard
+          )
           .subscribe({
             next: () => {
               this.success = 'Transfer successful!';

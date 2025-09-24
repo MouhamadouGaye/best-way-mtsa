@@ -30,7 +30,7 @@
           (input)="filterCountries()"
           (focus)="onDropdownMenu('country', $event)"
         />
-        <ul *ngIf="openDropdown === 'country' && filteredCountries.length > 0">
+        <ul *ngIf="openDropdown === 'country' && filteredCountries.length">
           <li *ngFor="let c of filteredCountries" (click)="chooseCountry(c)">
             <div class="country-dropdown">
               <span class="flag">{{ c.flag }}</span>
@@ -58,7 +58,6 @@
             (click)="chooseBeneficiary(b)"
           >
             <div class="beneficiary-dropdown">
-              <span class="flag">{{ b.flag }}</span>
               <span class="name"> {{ b.fullName }} </span>
               <span class="phone-number">{{ b.phoneNumber }}</span>
             </div>
@@ -147,7 +146,7 @@
         <input type="text" placeholder="CVV" [(ngModel)]="cardInfo.cvv" />
       </div>
 
-      <button type="button" (click)="sendTransfer()" [disabled]="loading">
+      <button type="button" (click)="sendTransferTest()" [disabled]="loading">
         Send
       </button>
 
@@ -160,7 +159,7 @@
       <h3>Recent Transfers</h3>
       <div *ngFor="let t of recentTransfers" class="history-item">
         <div class="left">
-          <span class="to">To: {{ t.toUser.username }}</span>
+          <span class="to">To: {{ t.recipientName }}</span>
           <span class="status" [ngClass]="t.status.toLowerCase()">{{
             t.status
           }}</span>

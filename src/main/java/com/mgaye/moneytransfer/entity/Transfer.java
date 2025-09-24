@@ -22,7 +22,7 @@ public class Transfer {
     private User fromUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "to_user_id", nullable = false)
+    @JoinColumn(name = "to_user_id", nullable = true)
     private User toUser;
 
     @Column(nullable = false, precision = 19, scale = 4)
@@ -36,7 +36,7 @@ public class Transfer {
     private TransferStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "beneficiary_id")
+    @JoinColumn(name = "beneficiary_id", nullable = true)
     private Beneficiary beneficiary; // optionnel
 
     public enum TransferStatus {
