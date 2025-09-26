@@ -12,14 +12,6 @@ export const countries = [
   { id: 5, name: 'Canada', currency: 'CAD' },
   { id: 6, name: 'CFA Franc BCEAO', currency: 'XOF' },
 ];
-// export const rates: any = {
-//   USD: 1,
-//   EUR: 0.91,
-//   GBP: 0.78,
-//   JPY: 145.2,
-//   CAD: 1.36,
-//   XOF: 625.95,
-// };
 
 export const rates: { [currency: string]: number } = {
   USD: 1.0, // baseline

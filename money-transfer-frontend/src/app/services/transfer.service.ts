@@ -121,7 +121,7 @@ export class TransferService {
       amount,
       fromCard, // send flag to backend
     });
-  }
+  } // this was testing without card details
 
   // createTransfer(
   //   toUserId: number | null,

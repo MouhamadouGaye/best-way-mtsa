@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 
 @Data
 public class TransferRequestDto {
-
     // For internal transfers: recipient must be an existing user in the system
     private Long toUserId;
 

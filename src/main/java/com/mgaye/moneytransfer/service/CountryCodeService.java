@@ -41,7 +41,7 @@ public class CountryCodeService {
                 .filter(c -> normalized.startsWith(c.getPrefix()))
                 .findFirst();
 
-        return match.map(CountryCodeEntry::getCode).orElse("INTL");
+        return match.map(CountryCodeEntry::getPrefix).orElse("INTL");
     }
 
     public CountryCodeEntry getCountryByPrefix(String phoneNumber) {

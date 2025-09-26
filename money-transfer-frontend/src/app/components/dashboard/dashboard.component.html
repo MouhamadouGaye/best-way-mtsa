@@ -83,21 +83,40 @@
           <h3>Add Beneficiary</h3>
           <span class="del-modal" (click)="closeModal()">⨉</span>
           <div class="add-beneficiary-form">
-            <input
-              type="text"
-              placeholder="Full Name"
-              [(ngModel)]="newBeneficiary.fullName"
-            />
-            <input
-              type="text"
-              placeholder="Phone Number"
-              [(ngModel)]="newBeneficiary.phoneNumber"
-            />
-            <input
-              type="email"
-              placeholder="Email (optional)"
-              [(ngModel)]="newBeneficiary.email"
-            />
+            <div>
+              <input
+                type="text"
+                placeholder="Full Name"
+                [(ngModel)]="newBeneficiary.fullName"
+              />
+            </div>
+
+            <div>
+              <select
+                type="text"
+                placeholder="Country"
+                [(ngModel)]="newBeneficiary.prefix"
+                (change)="onCountryCodeChange($event)"
+              >
+                <option value="">-- Select code --</option>
+                <option *ngFor="let c of countryPrefixes" [value]="c.prefix">
+                  {{ c.prefix }}
+                </option>
+              </select>
+              <input
+                type="text"
+                placeholder="Phone Number"
+                [(ngModel)]="newBeneficiary.phoneNumber"
+              />
+            </div>
+            <div>
+              <input
+                type="email"
+                placeholder="Email (optional)"
+                [(ngModel)]="newBeneficiary.email"
+              />
+            </div>
+
             <button
               type="button"
               (click)="addBeneficiary()"
@@ -146,13 +165,20 @@
         <input type="text" placeholder="CVV" [(ngModel)]="cardInfo.cvv" />
       </div>
 
-      <button type="button" (click)="sendTransferTest()" [disabled]="loading">
+      <button type="button" (click)="sendTransfer()" [disabled]="loading">
         Send
       </button>
 
       <p class="success" *ngIf="success">{{ success }}</p>
       <p class="error" *ngIf="error">{{ error }}</p>
     </section>
+    <!-- Loading spinner -->
+    <div class="loading-layer" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>*</span>
+      <span>*</span>
+      <span>*</span>
+    </div>
 
     <!-- Recent transfers -->
     <section class="card history">

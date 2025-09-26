@@ -137,15 +137,20 @@ public class TransferService {
     private final TransferRepository transferRepository;
     private final TransactionEntryRepository entryRepository;
     private final BeneficiaryRepository beneficiaryRepository;
+    private final PaymentService paymentService;
+    private final TransactionEntryService transactionEntryService;
 
     public TransferService(UserRepository userRepository,
             TransferRepository transferRepository,
             TransactionEntryRepository entryRepository,
-            BeneficiaryRepository beneficiaryRepository) {
+            BeneficiaryRepository beneficiaryRepository, PaymentService paymentService,
+            TransactionEntryService transactionEntryService) {
         this.userRepository = userRepository;
         this.transferRepository = transferRepository;
         this.entryRepository = entryRepository;
         this.beneficiaryRepository = beneficiaryRepository;
+        this.paymentService = paymentService;
+        this.transactionEntryService = transactionEntryService;
     }
 
     // @Transactional
@@ -215,6 +220,92 @@ public class TransferService {
     // provided");
     // }
     // }
+
+    @Transactional
+    public Transfer createTransferWithStripe(
+            Long fromUserId,
+            Long toUserId,
+            Long beneficiaryId,
+            BigDecimal amount,
+            boolean fromCard) {
+
+        User fromUser = userRepository.findById(fromUserId)
+                .orElseThrow(() -> new RuntimeException("Sender not found"));
+
+        if (!fromCard) {
+            // Wallet case → check balance
+            if (fromUser.getBalance().compareTo(amount) < 0) {
+                throw new RuntimeException("Insufficient wallet balance");
+            }
+        } else {
+            // Card case → Stripe charge
+            String paymentMethodId = fromUser.getStripePaymentMethodId(); // must be stored in User
+            String currency = "usd"; // or fromUser.getCurrency()
+            long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
+
+            boolean charged = paymentService.chargeCard(paymentMethodId, currency, amountInCents);
+            if (!charged) {
+                throw new RuntimeException("Card payment failed");
+            }
+        }
+
+        Transfer.TransferBuilder transferBuilder = Transfer.builder()
+                .fromUser(fromUser)
+                .amount(amount)
+                .status(Transfer.TransferStatus.COMPLETED)
+                .createdAt(Instant.now());
+
+        if (toUserId != null) {
+            User toUser = userRepository.findById(toUserId)
+                    .orElseThrow(() -> new RuntimeException("Recipient not found"));
+
+            if (!fromCard) {
+                fromUser.setBalance(fromUser.getBalance().subtract(amount));
+                toUser.setBalance(toUser.getBalance().add(amount));
+                userRepository.save(fromUser);
+                userRepository.save(toUser);
+            } else {
+                // ✅ Card payment → only credit the recipient
+                toUser.setBalance(toUser.getBalance().add(amount));
+                userRepository.save(toUser);
+            }
+
+            Transfer transfer = transferBuilder
+                    .toUser(toUser)
+                    .beneficiary(null)
+                    .build();
+
+            transferRepository.save(transfer);
+
+            // ✅ Add transaction entries for both wallet and card
+            transactionEntryService.addTransactionEntries(fromUser, toUser, transfer, fromCard);
+            return transfer;
+
+        } else if (beneficiaryId != null) {
+            Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
+                    .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
+
+            if (!fromCard) {
+                fromUser.setBalance(fromUser.getBalance().subtract(amount));
+                userRepository.save(fromUser);
+            }
+            // ✅ Card payment: nothing to subtract from wallet
+
+            Transfer transfer = transferBuilder
+                    .toUser(null)
+                    .beneficiary(beneficiary)
+                    .build();
+
+            transferRepository.save(transfer);
+
+            // ✅ Add transaction entry (wallet affected or card payment)
+            transactionEntryService.addTransactionEntry(fromUser, transfer, fromCard);
+            return transfer;
+
+        } else {
+            throw new IllegalArgumentException("Either toUserId or beneficiaryId must be provided");
+        }
+    }
 
     @Transactional
     public Transfer createTransfer(

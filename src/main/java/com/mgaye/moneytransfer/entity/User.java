@@ -32,6 +32,9 @@ public class User {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal balance = BigDecimal.ZERO;
 
+    @Column(name = "stripe_payment_method_id", unique = true)
+    private String stripePaymentMethodId; // this was add for strype payment service
+
     // IDs to the transaction_entries table forming the user's linked list
     @Column(name = "head_entry_id")
     private Long headEntryId;

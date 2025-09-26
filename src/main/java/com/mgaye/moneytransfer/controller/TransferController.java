@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.security.Principal;
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -27,47 +28,6 @@ public class TransferController {
 
     private final TransferService transferService;
     private final UserRepository userRepository;
-
-    // // ✅ Create a new transfer (either to another user or to a beneficiary)
-    // @PostMapping
-    // @PreAuthorize("isAuthenticated()")
-    // public TransferDTO createTransfer(@RequestBody TransferRequestDto request,
-    // Principal principal) {
-
-    // // 1. Validate amount
-    // if (request.getAmount() == null ||
-    // request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-    // throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be
-    // greater than zero");
-    // }
-
-    // // 2. Validate recipient
-    // if (request.getToUserId() == null && request.getBeneficiaryId() == null) {
-    // throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-    // "Either toUserId or beneficiaryId must be provided");
-    // }
-
-    // // 3. Derive sender from authenticated principal (NEVER trust frontend)
-    // User sender = userRepository.findByEmail(principal.getName())
-    // .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User
-    // not found"));
-
-    // try {
-    // // 4. Delegate to service
-    // Transfer transfer = transferService.createTransfer(
-    // sender.getId(),
-    // request.getToUserId(),
-    // request.getBeneficiaryId(),
-    // request.getAmount());
-
-    // // 5. Convert to DTO for response
-    // return TransferDTO.from(transfer);
-
-    // } catch (RuntimeException e) {
-    // // Service-level validation errors
-    // throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-    // }
-    // }
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -122,4 +82,5 @@ public class TransferController {
                 .map(TransferDTO::from)
                 .toList();
     }
+
 }

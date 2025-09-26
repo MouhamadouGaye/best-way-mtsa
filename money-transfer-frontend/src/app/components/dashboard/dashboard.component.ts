@@ -47,6 +47,7 @@ export class DashboardComponent implements OnInit {
   showAddBeneficiary: boolean = false;
   newBeneficiary: Partial<BeneficiaryDTO> = {
     fullName: '',
+    prefix: '',
     phoneNumber: '',
     email: '',
   };
@@ -114,8 +115,9 @@ export class DashboardComponent implements OnInit {
   loadUserData() {
     this.authService.getCurrentUser().subscribe({
       next: (user: any) => {
-        if (!user) return;
+        if (!user) return; // Sanity check
         this.balance = user.balance;
+
         this.senderCurrency = user.currency || 'USD';
         this.loadTransfers();
       },
@@ -171,7 +173,7 @@ export class DashboardComponent implements OnInit {
     );
     if (matches) phoneForFlag = matches.flag;
 
-    this.selectedBeneficiary = ` ${phoneForFlag} ${b.fullName} + (${b.phoneNumber})`;
+    this.selectedBeneficiary = ` ${phoneForFlag} ${b.fullName} (${b.phoneNumber})`;
     // this.toUserId = b.id;
     this.toBeneficiaryId = b.id;
     this.filteredBeneficiaries = [];
@@ -197,21 +199,21 @@ export class DashboardComponent implements OnInit {
     }
 
     // Clean phone (remove spaces & dashes)
-    let phone = this.newBeneficiary.phoneNumber
-      .replace(/\s+/g, '')
-      .replace(/-/g, '');
+    let phone = this.newBeneficiary.prefix + this.newBeneficiary.phoneNumber;
+    // .replace(/\s+/g, '')
+    // .replace(/-/g, '');
 
     // end test
 
     // Auto-detect prefix from known countryPrefixes
     const matchedPrefix = this.countryPrefixes.find((c) =>
-      phone.startsWith(c.prefix.replace('+', ''))
+      phone.startsWith(c.prefix)
     );
     console.log('matchedPrefix: WITH "+ ' + matchedPrefix);
     console.log('matchedPrefix WITH ",": ', matchedPrefix);
 
     if (matchedPrefix) {
-      phone = '+' + phone;
+      phone = phone;
       // if (!phone.startsWith('+')) phone = matchedPrefix.prefix + phone;
     } else {
       const fallbackPrefix = '+33'; // France default
@@ -339,6 +341,81 @@ export class DashboardComponent implements OnInit {
   //   });
   // }
 
+  // dashboard.component.ts
+
+  sendTransfer() {
+    if (!this.toUserId && !this.toBeneficiaryId) {
+      this.error = 'Please select a recipient';
+      return;
+    }
+    if (!this.amountSender) {
+      this.error = 'Please enter an amount';
+      return;
+    }
+
+    // Determine if the user is using a card
+    const usingCard =
+      this.cardInfo.cardNumber &&
+      this.cardInfo.expiryMonth &&
+      this.cardInfo.expiryYear &&
+      this.cardInfo.cvv;
+
+    this.error = '';
+    this.success = '';
+    this.loading = true;
+
+    this.authService.getCurrentUser().subscribe({
+      next: (user: any) => {
+        if (!user) {
+          this.error = 'User not found';
+          this.loading = false;
+          return;
+        }
+
+        this.transferService
+          .createTransfer(
+            user.id,
+            this.toUserId || null,
+            this.toBeneficiaryId || null,
+            this.amountSender,
+            !!usingCard // tell backend if it’s card or wallet
+          )
+          .subscribe({
+            next: () => {
+              this.success = 'Transfer successful!';
+              this.loadUserData(); // refresh balance and transfers
+              this.resetTransferForm();
+            },
+            error: (err) => {
+              this.error = err.error?.message || 'Transfer failed';
+              this.loading = false;
+            },
+          });
+      },
+      error: () => {
+        this.error = 'Failed to load current user';
+        this.loading = false;
+      },
+    });
+  }
+
+  // Reset form after a successful transfer
+  resetTransferForm() {
+    this.amountSender = null;
+    this.amountReceiver = null;
+    this.selectedBeneficiary = '';
+    this.toUserId = null;
+    this.toBeneficiaryId = null;
+    this.selectedCountry = '';
+    this.cardInfo = {
+      cardNumber: '',
+      expiryMonth: '',
+      expiryYear: '',
+      cvv: '',
+    };
+    this.openDropdown = null;
+  }
+
   // for testing
   sendTransferTest() {
     if (!this.toBeneficiaryId || !this.amountSender) {
@@ -357,7 +434,6 @@ export class DashboardComponent implements OnInit {
           this.loading = false;
           return;
         }
-        console.log('toUserId: ', user.id);
 
         this.transferService
           .createTransfer(
@@ -369,6 +445,8 @@ export class DashboardComponent implements OnInit {
           )
           .subscribe({
             next: () => {
+              this.loading = true;
+              setTimeout(() => (this.loading = false), 2000);
               this.success = 'Transfer successful!';
               this.loadUserData();
               this.resetTransferForm();
@@ -386,18 +464,18 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  resetTransferForm() {
-    this.selectedBeneficiary = '';
-    this.toUserId = null;
-    this.amountSender = null;
-    this.amountReceiver = null;
-    this.cardInfo = {
-      cardNumber: '',
-      expiryMonth: '',
-      expiryYear: '',
-      cvv: '',
-    };
-    this.loading = false;
+  onCountryCodeChange(event: Event) {
+    const selectedPrefix = (event.target as HTMLSelectElement).value;
+    console.log('Selected prefix:', selectedPrefix);
+
+    // Example: auto-update phone number with prefix
+    if (
+      this.newBeneficiary.phoneNumber &&
+      !this.newBeneficiary.phoneNumber.startsWith(selectedPrefix)
+    ) {
+      this.newBeneficiary.phoneNumber =
+        selectedPrefix + this.newBeneficiary.phoneNumber.replace(/^\+?\d*/, '');
+    }
   }
 
   // ------------------------------
