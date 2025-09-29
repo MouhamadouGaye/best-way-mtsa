@@ -1,27 +1,15 @@
 <div class="dashboard">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <h2 class="logo">💸 MoneyApp</h2>
-    <nav>
-      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-      <a routerLink="/history" routerLinkActive="active">Transactions</a>
-      <a routerLink="/profile" routerLinkActive="active">Profile</a>
-    </nav>
-  </aside>
+  <app-sidebar></app-sidebar>
 
-  <!-- Main -->
   <main class="main">
-    <!-- Balance card -->
     <section class="card balance">
       <h3>Current Balance</h3>
       <p class="amount">{{ balance | currency : senderCurrency }}</p>
     </section>
 
-    <!-- Transfer card -->
     <section class="card transfer">
       <h3>Send Money</h3>
 
-      <!-- Country selector -->
       <div class="dropdown-wrapper" (click)="$event.stopPropagation()">
         <input
           type="text"
@@ -41,7 +29,6 @@
         </ul>
       </div>
 
-      <!-- Beneficiary selector -->
       <div class="dropdown-wrapper" (click)="$event.stopPropagation()">
         <input
           type="text"
@@ -65,7 +52,6 @@
         </ul>
       </div>
 
-      <!-- Add beneficiary toggle -->
       <button
         type="button"
         class="add-btn"
@@ -128,7 +114,6 @@
         </div>
       </div>
 
-      <!-- Amount inputs -->
       <div class="currency-inputs">
         <input
           type="number"
@@ -145,7 +130,6 @@
         <span>{{ receiverCurrency }}</span>
       </div>
 
-      <!-- Card inputs -->
       <div class="card-form">
         <input
           type="text"
@@ -164,6 +148,7 @@
         />
         <input type="text" placeholder="CVV" [(ngModel)]="cardInfo.cvv" />
       </div>
+      <div #cardContainer id="card-element"></div>
 
       <button type="button" (click)="sendTransfer()" [disabled]="loading">
         Send
@@ -172,7 +157,6 @@
       <p class="success" *ngIf="success">{{ success }}</p>
       <p class="error" *ngIf="error">{{ error }}</p>
     </section>
-    <!-- Loading spinner -->
     <div class="loading-layer" *ngIf="loading">
       <div class="spinner"></div>
       <span>*</span>
@@ -180,12 +164,11 @@
       <span>*</span>
     </div>
 
-    <!-- Recent transfers -->
     <section class="card history">
       <h3>Recent Transfers</h3>
       <div *ngFor="let t of recentTransfers" class="history-item">
         <div class="left">
-          <span class="to">|--> {{ t.recipientName }}</span>
+          <span class="to">|{{ t.recipientName }}</span>
           <span class="status" [ngClass]="t.status.toLowerCase()">{{
             t.status
           }}</span>
@@ -197,3 +180,172 @@
     </section>
   </main>
 </div>
+
+<!-- <section class="card balance">
+  <h3>Current Balance</h3>
+  <p class="amount">{{ balance | currency : senderCurrency }}</p>
+</section>
+
+<section class="card transfer">
+  <h3>Send Money</h3>
+
+  <div class="dropdown-wrapper" (click)="$event.stopPropagation()">
+    <input
+      type="text"
+      placeholder="Select destination country"
+      [(ngModel)]="selectedCountry"
+      (input)="filterCountries()"
+      (focus)="onDropdownMenu('country', $event)"
+    />
+    <ul *ngIf="openDropdown === 'country' && filteredCountries.length">
+      <li *ngFor="let c of filteredCountries" (click)="chooseCountry(c)">
+        <div class="country-dropdown">
+          <span class="flag">{{ c.flag }}</span>
+          <span class="name"> {{ c.name }} </span>
+          <span class="currency">{{ c.currency }}</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="dropdown-wrapper" (click)="$event.stopPropagation()">
+    <input
+      type="text"
+      placeholder="Recipient name or phone"
+      [(ngModel)]="selectedBeneficiary"
+      (input)="filterBeneficiaries()"
+      (focus)="onDropdownMenu('beneficiary', $event)"
+    />
+    <ul *ngIf="openDropdown === 'beneficiary' && filteredBeneficiaries.length">
+      <li
+        *ngFor="let b of filteredBeneficiaries"
+        (click)="chooseBeneficiary(b)"
+      >
+        <div class="beneficiary-dropdown">
+          <span class="name"> {{ b.fullName }} </span>
+          <span class="phone-number">{{ b.phoneNumber }}</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <button
+    type="button"
+    class="add-btn"
+    (click)="showAddBeneficiary = !showAddBeneficiary"
+  >
+    + Add Beneficiary
+  </button>
+
+  <div
+    class="beneficiary-overlay"
+    *ngIf="showAddBeneficiary"
+    (click)="closeModal()"
+  >
+    <div class="form-base" (click)="$event.stopPropagation()">
+      <h3>Add Beneficiary</h3>
+      <span class="del-modal" (click)="closeModal()">⨉</span>
+      <div class="add-beneficiary-form">
+        <div>
+          <input
+            type="text"
+            placeholder="Full Name"
+            [(ngModel)]="newBeneficiary.fullName"
+          />
+        </div>
+
+        <div>
+          <select
+            type="text"
+            placeholder="Country"
+            [(ngModel)]="newBeneficiary.prefix"
+            (change)="onCountryCodeChange($event)"
+          >
+            <option value="">-- Select code --</option>
+            <option *ngFor="let c of countryPrefixes" [value]="c.prefix">
+              {{ c.prefix }}
+            </option>
+          </select>
+          <input
+            type="text"
+            placeholder="Phone Number"
+            [(ngModel)]="newBeneficiary.phoneNumber"
+          />
+        </div>
+        <div>
+          <input
+            type="email"
+            placeholder="Email (optional)"
+            [(ngModel)]="newBeneficiary.email"
+          />
+        </div>
+
+        <button type="button" (click)="addBeneficiary()" [disabled]="loading">
+          Add
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="currency-inputs">
+    <input
+      type="number"
+      placeholder="Amount ({{ senderCurrency }})"
+      [(ngModel)]="amountSender"
+      (input)="updateConvertedAmount('sender')"
+    />
+    <input
+      type="number"
+      placeholder="Converted ({{ receiverCurrency || '?' }})"
+      [(ngModel)]="amountReceiver"
+      (input)="updateConvertedAmount('receiver')"
+    />
+    <span>{{ receiverCurrency }}</span>
+  </div>
+  <div class="card-form">
+    <input
+      type="text"
+      placeholder="Card Number"
+      [(ngModel)]="cardInfo.cardNumber"
+    />
+    <input
+      type="text"
+      placeholder="Expiry Month"
+      [(ngModel)]="cardInfo.expiryMonth"
+    />
+    <input
+      type="text"
+      placeholder="Expiry Year"
+      [(ngModel)]="cardInfo.expiryYear"
+    />
+    <input type="text" placeholder="CVV" [(ngModel)]="cardInfo.cvv" />
+  </div>
+
+  <button type="button" (click)="sendTransfer()" [disabled]="loading">
+    Send
+  </button>
+
+  <p class="success" *ngIf="success">{{ success }}</p>
+  <p class="error" *ngIf="error">{{ error }}</p>
+</section>
+<div class="loading-layer" *ngIf="loading">
+  <div class="spinner"></div>
+  <span>*</span>
+  <span>*</span>
+  <span>*</span>
+</div>
+
+<section class="card history">
+  <h3>Recent Transfers</h3>
+  <div *ngFor="let t of recentTransfers" class="history-item">
+    <div class="left">
+      <span class="to">| {{ t.recipientName }}</span>
+      <span class="status" [ngClass]="t.status.toLowerCase()">{{
+        t.status
+      }}</span>
+    </div>
+    <div class="right">
+      <span class="amount">{{ t.amount | currency : senderCurrency }}</span>
+    </div>
+  </div>
+</section> -->

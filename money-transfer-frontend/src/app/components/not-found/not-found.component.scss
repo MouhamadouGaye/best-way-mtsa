@@ -1,0 +1,32 @@
+.not-found {
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+
+    .cover {
+        background-color: rgba(65, 0, 125, 0.316);
+        color: white;
+        width: 300px;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+
+        .card {
+            width: 90%;
+            padding: 20px;
+            background-color: white;
+            border-radius:10px;
+
+            h3{
+            font-size: larger;
+             color: rgba(65, 0, 125, 0.719);
+
+            }
+        }
+
+    }
+}

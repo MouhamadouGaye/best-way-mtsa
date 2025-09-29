@@ -1,0 +1,16 @@
+<section class="card payment-info">
+  <app-sidebar></app-sidebar>
+
+  <h3>💳 Payment Methods</h3>
+
+  <div *ngIf="loading">Loading cards...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngFor="let c of cards" class="bank-card">
+    <div class="brand">{{ c.brand }}</div>
+    <div class="number">**** **** **** {{ c.cardNumberLast4 }}</div>
+    <div class="expiry">Exp: {{ c.expiryMonth }}/{{ c.expiryYear }}</div>
+  </div>
+
+  <button routerLink="/add-card" class="add-btn">+ Add New Card</button>
+</section>

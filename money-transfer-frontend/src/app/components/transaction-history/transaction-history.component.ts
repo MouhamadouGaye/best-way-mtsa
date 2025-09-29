@@ -1,20 +1,24 @@
 // src/app/components/transaction-history/transaction-history.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLinkActive } from '@angular/router';
 import { TransferService } from '../../services/transfer.service';
 import { FormsModule } from '@angular/forms';
+import { SidebarComponent } from '../sidebar/sidebar.component';
+import { HistoryItem } from '../../models/HistoryItem';
 
 @Component({
   selector: 'app-transaction-history',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './transaction-history.component.html',
   styleUrls: ['./transaction-history.component.scss'],
 })
 export class TransactionHistoryComponent implements OnInit {
   userId!: number;
-  history: any[] = [];
+  // history: any[] = [];
+  history: HistoryItem[] = [];
+
   errorMessage: string | null = null;
   loading = true;
   limit: number = 20; // default
@@ -25,8 +29,20 @@ export class TransactionHistoryComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.userId = Number(this.route.snapshot.paramMap.get('userId'));
-    this.loadHistory();
+    this.getCurrentUser();
+  }
+
+  getCurrentUser() {
+    this.transferService.getCurrentUser().subscribe({
+      next: (user: any) => {
+        this.userId = user.id;
+        this.loadHistory();
+      },
+      error: (err) => {
+        console.error('Could not load current user', err);
+        this.loading = false;
+      },
+    });
   }
 
   private loadHistory() {
@@ -78,11 +94,10 @@ export class TransactionHistoryComponent implements OnInit {
 
   //   fetchPrev();
   // }
-
-  private traverseBackward(node: any, limit: number = 20) {
-    this.history = []; // reset
-    let current = node;
-    let count = 0; // keep track of how many we’ve collected
+  private traverseBackward(node: HistoryItem, limit: number = this.limit) {
+    this.history = [];
+    let current: HistoryItem | null = node;
+    let count = 0;
 
     const fetchPrev = () => {
       if (!current || count >= limit) {
@@ -90,13 +105,12 @@ export class TransactionHistoryComponent implements OnInit {
         return;
       }
 
-      // ✅ push newest first
       this.history.push(current);
       count++;
 
       if (current.prevEntryId) {
         this.transferService.getEntry(current.prevEntryId).subscribe({
-          next: (prevNode: any) => {
+          next: (prevNode: HistoryItem) => {
             current = prevNode;
             fetchPrev();
           },

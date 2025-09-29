@@ -1,0 +1,20 @@
+  .sidebar {
+    width: 220px;
+    background-color: #1f2937;
+    color: #a23232;
+    padding: 2rem;
+    height: 100vh;
+    nav a {
+      display: block;
+      margin: 1rem 0;
+      color: #fff;
+      text-decoration: none;
+      &.active {
+        font-weight: bold;
+        color: #fbbf24;
+      }
+      &:hover {
+        color: #fbbf24;
+      }
+    }
+  }

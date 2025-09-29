@@ -46,7 +46,7 @@ public class TransferController {
         }
 
         // 3. Identify the sender from the authenticated principal (never trust frontend
-        // IDs)
+        // IDs) & swz
         User sender = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
@@ -54,13 +54,18 @@ public class TransferController {
             // 4. Delegate to the service layer:
             // - Handles internal vs external transfers
             // - Applies "fromCard" logic (skip balance check if true)
-            Transfer transfer = transferService.createTransfer(
+            Transfer transfer = transferService.createTransferWithStripe(
                     sender.getId(),
                     request.getToUserId(),
                     request.getBeneficiaryId(),
                     request.getAmount(),
                     request.isFromCard() // <-- new flag to indicate card funding
             );
+            System.out.println("|||||||||||||||DATA: " + sender.getId() +
+                    request.getToUserId() +
+                    request.getBeneficiaryId() +
+                    request.getAmount() +
+                    request.isFromCard());
 
             // 5. Convert entity to DTO for the API response
             return TransferDTO.from(transfer);

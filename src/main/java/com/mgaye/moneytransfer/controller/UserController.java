@@ -2,8 +2,11 @@ package com.mgaye.moneytransfer.controller;
 
 import com.mgaye.moneytransfer.dto.UserDto;
 import com.mgaye.moneytransfer.entity.User;
+import com.mgaye.moneytransfer.repository.UserRepository;
 import com.mgaye.moneytransfer.service.UserService;
+import com.stripe.exception.StripeException;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.http.HttpStatus;
@@ -17,9 +20,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
+    private final UserRepository userRepository;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserRepository userRepository) {
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/register")
@@ -57,6 +62,25 @@ public class UserController {
         User user = userService.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(UserDto.fromEntity(user));
+    }
+
+    @PostMapping("/{userId}/payment-method")
+    public ResponseEntity<String> attachPaymentMethod(
+            @PathVariable Long userId,
+            @RequestBody Map<String, String> body) throws StripeException {
+
+        String pmId = body.get("paymentMethodId");
+        if (pmId == null || pmId.isBlank()) {
+            return ResponseEntity.badRequest().body("PaymentMethod ID is required");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setStripePaymentMethodId(pmId); // save pm_xxx for future payments
+        userRepository.save(user);
+
+        return ResponseEntity.ok("Payment method attached successfully");
     }
 
 }

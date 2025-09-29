@@ -1,4 +1,4 @@
-<!-- 
+<app-sidebar></app-sidebar>
 <div class="history-page">
   <div class="header">
     <h2>Transaction History</h2>
@@ -10,44 +10,7 @@
     <ul>
       <li *ngFor="let h of history" class="history-item">
         <div class="info">
-          <span class="date">{{ h.date | date : "short" }}</span>
-          <span class="details">
-            From: {{ h.fromUserId }} → To: {{ h.toUserId }}
-          </span>
-        </div>
-        <span class="amount">$ {{ h.amount }}</span>
-      </li>
-    </ul>
-  </div>
-
-  <ng-template #noHistory>
-    <div class="empty-state">
-      <p>No history found for this user.</p>
-    </div>
-  </ng-template>
-</div> -->
-
-<div class="history-page">
-  <div class="header">
-    <h2>Transaction History</h2>
-  </div>
-
-  <!-- drop down list of the transaction -->
-  <label for="limit">Show last:</label>
-  <select id="limit" [(ngModel)]="limit" (change)="onLimitChange(limit)">
-    <option [value]="10">10</option>
-    <option [value]="20">20</option>
-    <option [value]="50">50</option>
-    <option [value]="100">100</option>
-  </select>
-
-  <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
-
-  <div class="history-card" *ngIf="history.length > 0; else noHistory">
-    <ul>
-      <li *ngFor="let h of history" class="history-item">
-        <div class="info">
-          <span class="date">{{ h.date | date : "short" }}</span>
+          <span class="date">{{ h.createdAt | date : "short" }}</span>
           <span class="details">
             From: {{ h.fromUserId }} → To: {{ h.toUserId }}
           </span>

@@ -2,8 +2,14 @@ package com.mgaye.moneytransfer.service;
 
 import com.mgaye.moneytransfer.entity.*;
 import com.mgaye.moneytransfer.repository.*;
+import com.stripe.exception.StripeException;
+
+import jakarta.persistence.JoinColumn;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -131,6 +137,7 @@ import java.util.Optional;
 
 // }
 
+@Slf4j
 @Service
 public class TransferService {
     private final UserRepository userRepository;
@@ -229,21 +236,43 @@ public class TransferService {
             BigDecimal amount,
             boolean fromCard) {
 
+        log.info("➡️ Starting transfer: fromUserId={}, toUserId={}, beneficiaryId={}, amount={}, fromCard={}",
+                fromUserId, toUserId, beneficiaryId, amount, fromCard);
+
         User fromUser = userRepository.findById(fromUserId)
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
+
+        log.info("✅ Sender loaded: {}", fromUser.getEmail());
+
+        if (fromCard) {
+            log.info("💳 Processing card payment with Stripe methodId={}", fromUser.getStripePaymentMethodId());
+        } else {
+            log.info("👛 Processing wallet transfer, balance={}", fromUser.getBalance());
+        }
 
         if (!fromCard) {
             // Wallet case → check balance
             if (fromUser.getBalance().compareTo(amount) < 0) {
-                throw new RuntimeException("Insufficient wallet balance");
+                throw new IllegalStateException("Insufficient wallet balance");
             }
         } else {
             // Card case → Stripe charge
-            String paymentMethodId = fromUser.getStripePaymentMethodId(); // must be stored in User
+            String paymentMethodId = fromUser.getStripePaymentMethodId();
+
+            if (paymentMethodId == null || paymentMethodId.isBlank()) {
+                throw new IllegalStateException(
+                        "No Stripe payment method found for this user. Attach a card first.");
+            }
+
             String currency = "usd"; // or fromUser.getCurrency()
             long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
 
-            boolean charged = paymentService.chargeCard(paymentMethodId, currency, amountInCents);
+            boolean charged;
+            try {
+                charged = paymentService.chargeCard(paymentMethodId, currency, amountInCents);
+            } catch (StripeException e) {
+                throw new RuntimeException("Stripe payment failed: " + e.getMessage(), e);
+            }
             if (!charged) {
                 throw new RuntimeException("Card payment failed");
             }
@@ -256,6 +285,8 @@ public class TransferService {
                 .createdAt(Instant.now());
 
         if (toUserId != null) {
+
+            // the end of the tes
             User toUser = userRepository.findById(toUserId)
                     .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
@@ -277,11 +308,12 @@ public class TransferService {
 
             transferRepository.save(transfer);
 
-            // ✅ Add transaction entries for both wallet and card
+            // ✅ Add transaction en;ktries for both wallet and card
             transactionEntryService.addTransactionEntries(fromUser, toUser, transfer, fromCard);
             return transfer;
 
         } else if (beneficiaryId != null) {
+
             Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
                     .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
 
@@ -298,7 +330,7 @@ public class TransferService {
 
             transferRepository.save(transfer);
 
-            // ✅ Add transaction entry (wallet affected or card payment)
+            // ✅ Add transaction entry (wallet ùaffected or card payment)
             transactionEntryService.addTransactionEntry(fromUser, transfer, fromCard);
             return transfer;
 
@@ -307,84 +339,85 @@ public class TransferService {
         }
     }
 
-    @Transactional
-    public Transfer createTransfer(
-            Long fromUserId,
-            Long toUserId,
-            Long beneficiaryId,
-            BigDecimal amount,
-            boolean fromCard) {
+    // @Transactional
+    // public Transfer createTransfer(
+    // Long fromUserId,
+    // Long toUserId,
+    // Long beneficiaryId,
+    // BigDecimal amount,
+    // boolean fromCard) {
 
-        User fromUser = userRepository.findById(fromUserId)
-                .orElseThrow(() -> new RuntimeException("Sender not found"));
+    // User fromUser = userRepository.findById(fromUserId)
+    // .orElseThrow(() -> new RuntimeException("Sender not found"));
 
-        // Only check balance if NOT using card
-        if (!fromCard && fromUser.getBalance().compareTo(amount) < 0) {
-            throw new RuntimeException("Insufficient balance");
-        }
+    // // Only check balance if NOT using card
+    // if (!fromCard && fromUser.getBalance().compareTo(amount) < 0) {
+    // throw new RuntimeException("Insufficient balance");
+    // }
 
-        Transfer.TransferBuilder transferBuilder = Transfer.builder()
-                .fromUser(fromUser)
-                .amount(amount)
-                .status(Transfer.TransferStatus.COMPLETED)
-                .createdAt(Instant.now());
+    // Transfer.TransferBuilder transferBuilder = Transfer.builder()
+    // .fromUser(fromUser)
+    // .amount(amount)
+    // .status(Transfer.TransferStatus.COMPLETED)
+    // .createdAt(Instant.now());
 
-        if (toUserId != null) {
-            // -------------------------
-            // Internal transfer
-            // -------------------------
-            User toUser = userRepository.findById(toUserId)
-                    .orElseThrow(() -> new RuntimeException("Recipient not found"));
+    // if (toUserId != null) {
+    // // -------------------------
+    // // Internal transfer
+    // // -------------------------
+    // User toUser = userRepository.findById(toUserId)
+    // .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
-            if (!fromCard) {
-                fromUser.setBalance(fromUser.getBalance().subtract(amount));
-                toUser.setBalance(toUser.getBalance().add(amount));
-                userRepository.save(fromUser);
-                userRepository.save(toUser);
-            }
+    // if (!fromCard) {
+    // fromUser.setBalance(fromUser.getBalance().subtract(amount));
+    // toUser.setBalance(toUser.getBalance().add(amount));
+    // userRepository.save(fromUser);
+    // userRepository.save(toUser);
+    // }
 
-            Transfer transfer = transferBuilder
-                    .toUser(toUser) // ✅ set internal recipient
-                    .beneficiary(null) // ✅ make sure beneficiary is null
-                    .build();
+    // Transfer transfer = transferBuilder
+    // .toUser(toUser) // ✅ set internal recipient
+    // .beneficiary(null) // ✅ make sure beneficiary is null
+    // .build();
 
-            transferRepository.save(transfer);
+    // transferRepository.save(transfer);
 
-            if (!fromCard) {
-                addTransactionEntries(fromUser, toUser, transfer);
-            }
+    // if (!fromCard) {
+    // addTransactionEntries(fromUser, toUser, transfer);
+    // }
 
-            return transfer;
+    // return transfer;
 
-        } else if (beneficiaryId != null) {
-            // -------------------------
-            // External transfer
-            // -------------------------
-            Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
-                    .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
+    // } else if (beneficiaryId != null) {
+    // // -------------------------
+    // // External transfer
+    // // -------------------------
+    // Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
+    // .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
 
-            if (!fromCard) {
-                fromUser.setBalance(fromUser.getBalance().subtract(amount));
-                userRepository.save(fromUser);
-            }
+    // if (!fromCard) {
+    // fromUser.setBalance(fromUser.getBalance().subtract(amount));
+    // userRepository.save(fromUser);
+    // }
 
-            Transfer transfer = transferBuilder
-                    .toUser(null) // ✅ clear toUser
-                    .beneficiary(beneficiary)
-                    .build();
+    // Transfer transfer = transferBuilder
+    // .toUser(null) // ✅ clear toUser
+    // .beneficiary(beneficiary)
+    // .build();
 
-            transferRepository.save(transfer);
+    // transferRepository.save(transfer);
 
-            if (!fromCard) {
-                addTransactionEntry(fromUser, transfer);
-            }
+    // if (!fromCard) {
+    // addTransactionEntry(fromUser, transfer);
+    // }
 
-            return transfer;
+    // return transfer;
 
-        } else {
-            throw new IllegalArgumentException("Either toUserId or beneficiaryId must be provided");
-        }
-    }
+    // } else {
+    // throw new IllegalArgumentException("Either toUserId or beneficiaryId must be
+    // provided");
+    // }
+    // }
 
     public List<Transfer> getUserTransfers(Long userId) {
         return transferRepository.findByFromUser_IdOrToUser_Id(userId, userId);
