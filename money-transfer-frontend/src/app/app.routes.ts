@@ -36,6 +36,7 @@ import { AuthGuard } from './guards/auth.guard';
 import { LoginComponent } from './components/auth/login/login.component';
 import { RegisterComponent } from './components/auth/register/register.component';
 import { NotFoundComponent } from './components/not-found/not-found.component';
+import { PaymentResultComponent } from './components/payment-result/payment-result.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -52,6 +53,13 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     data: { showNavbar: true },
   },
+  {
+    path: 'payment-result',
+    component: PaymentResultComponent,
+    canActivate: [AuthGuard],
+    data: { showNavbar: true },
+  },
+
   {
     path: 'history',
     component: TransactionHistoryComponent,

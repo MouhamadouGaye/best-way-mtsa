@@ -40,6 +40,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<TransactionEntry> transactionEntry; // this was add for strype payment
 
+    @Column(name = "stripe_customer_id", unique = true)
+    private String stripeCustomerId; // ✅ add this
+
     @Column(name = "stripe_payment_method_id", unique = true)
     private String stripePaymentMethodId; // this was add for strype payment service
 

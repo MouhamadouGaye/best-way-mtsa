@@ -78,7 +78,7 @@
             </div>
 
             <div>
-              <select
+              <!-- <select
                 type="text"
                 placeholder="Country"
                 [(ngModel)]="newBeneficiary.prefix"
@@ -88,7 +88,15 @@
                 <option *ngFor="let c of countryPrefixes" [value]="c.prefix">
                   {{ c.prefix }}
                 </option>
+              </select> -->
+              // Template:
+              <select [(ngModel)]="newBeneficiary.prefix">
+                <option value="">-- Select code --</option>
+                <option *ngFor="let c of countryPrefixes" [value]="c.prefix">
+                  {{ c.prefix }}
+                </option>
               </select>
+
               <input
                 type="text"
                 placeholder="Phone Number"

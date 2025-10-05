@@ -1,8 +1,14 @@
 package com.mgaye.moneytransfer.controller;
 
 import com.mgaye.moneytransfer.dto.TransactionEntryDto;
+import com.mgaye.moneytransfer.dto.request.TransactionEntryRequest;
 import com.mgaye.moneytransfer.entity.TransactionEntry;
 import com.mgaye.moneytransfer.service.TransactionEntryService;
+
+import jakarta.persistence.EntityNotFoundException;
+
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +19,20 @@ public class TransactionEntryController {
 
     public TransactionEntryController(TransactionEntryService entryService) {
         this.entryService = entryService;
+    }
+
+    @PostMapping
+    public ResponseEntity<TransactionEntryDto> createEntry(
+            @RequestBody TransactionEntryDto request) {
+        try {
+            TransactionEntry entry = entryService.createEntry(
+                    request.getUserId(),
+                    request.getTransferId(),
+                    request.getAmount());
+            return ResponseEntity.ok(TransactionEntryDto.fromEntity(entry));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping("/{id}")
@@ -38,4 +58,16 @@ public class TransactionEntryController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
     }
+
+    // When you are not using linked-list
+    @GetMapping("/user/{userId}/history")
+    public List<TransactionEntryDto> getUserHistory(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "20") int limit) {
+        return entryService.findByUserIdOrderByCreatedAtDesc(userId, limit)
+                .stream()
+                .map(TransactionEntryDto::fromEntity)
+                .toList();
+    }
+
 }

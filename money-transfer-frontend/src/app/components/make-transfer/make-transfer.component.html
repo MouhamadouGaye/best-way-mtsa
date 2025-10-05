@@ -1,0 +1,22 @@
+<div class="transfer-form">
+  <h3>Create Transaction</h3>
+
+  <form (ngSubmit)="submit()">
+    <div>
+      <label>Transfer ID</label>
+      <input
+        type="number"
+        [(ngModel)]="transferId"
+        name="transferId"
+        required
+      />
+    </div>
+
+    <div>
+      <label>Amount</label>
+      <input type="number" [(ngModel)]="amount" name="amount" required />
+    </div>
+
+    <button type="submit">Submit</button>
+  </form>
+</div>

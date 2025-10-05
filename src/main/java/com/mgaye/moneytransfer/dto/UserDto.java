@@ -3,24 +3,24 @@ package com.mgaye.moneytransfer.dto;
 import com.mgaye.moneytransfer.entity.User;
 import lombok.Data;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-
 @Data
 public class UserDto {
     private Long id;
     private String username;
     private String email;
     private String password;
-    private String phoneNumber; // 📱 new
+    private String phoneNumber;
+
+    private boolean hasSavedCard; // 🔹 new field
 
     // ✅ Convert from entity
-    public static UserDto fromEntity(User user) {
+    public static UserDto fromEntity(User user, boolean hasSavedCard) {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setHasSavedCard(hasSavedCard);
         return dto;
     }
 
@@ -51,4 +51,5 @@ public class UserDto {
     // public String getPhoneNumber() { return phoneNumber; }
     // public void setPhoneNumber(String phoneNumber) { this.phoneNumber =
     // phoneNumber; }
+
 }

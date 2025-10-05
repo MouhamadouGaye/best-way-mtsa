@@ -142,6 +142,7 @@ import java.util.Optional;
 public class TransferService {
     private final UserRepository userRepository;
     private final TransferRepository transferRepository;
+    private final CardRepository cardRepository;
     private final TransactionEntryRepository entryRepository;
     private final BeneficiaryRepository beneficiaryRepository;
     private final PaymentService paymentService;
@@ -149,11 +150,13 @@ public class TransferService {
 
     public TransferService(UserRepository userRepository,
             TransferRepository transferRepository,
+            CardRepository cardRepository,
             TransactionEntryRepository entryRepository,
             BeneficiaryRepository beneficiaryRepository, PaymentService paymentService,
             TransactionEntryService transactionEntryService) {
         this.userRepository = userRepository;
         this.transferRepository = transferRepository;
+        this.cardRepository = cardRepository;
         this.entryRepository = entryRepository;
         this.beneficiaryRepository = beneficiaryRepository;
         this.paymentService = paymentService;
@@ -228,6 +231,122 @@ public class TransferService {
     // }
     // }
 
+    // @Transactional
+    // public Transfer createTransferWithStripe(
+    // Long fromUserId,
+    // Long toUserId,
+    // Long beneficiaryId,
+    // BigDecimal amount,
+    // boolean fromCard) {
+
+    // log.info("➡️ Starting transfer: fromUserId={}, toUserId={}, beneficiaryId={},
+    // amount={}, fromCard={}",
+    // fromUserId, toUserId, beneficiaryId, amount, fromCard);
+
+    // User fromUser = userRepository.findById(fromUserId)
+    // .orElseThrow(() -> new RuntimeException("Sender not found"));
+
+    // log.info("✅ Sender loaded: {}", fromUser.getEmail());
+
+    // if (fromCard) {
+    // log.info("💳 Processing card payment with Stripe methodId={}",
+    // fromUser.getStripePaymentMethodId());
+    // } else {
+    // log.info("👛 Processing wallet transfer, balance={}", fromUser.getBalance());
+    // }
+
+    // if (!fromCard) {
+    // // Wallet case → check balance
+    // if (fromUser.getBalance().compareTo(amount) < 0) {
+    // throw new IllegalStateException("Insufficient wallet balance");
+    // }
+    // } else {
+    // // Card case → Stripe charge
+    // String paymentMethodId = fromUser.getStripePaymentMethodId();
+
+    // if (paymentMethodId == null || paymentMethodId.isBlank()) {
+    // throw new IllegalStateException(
+    // "No Stripe payment method found for this user. Attach a card first.");
+    // }
+
+    // String currency = "usd"; // or fromUser.getCurrency()
+    // long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
+
+    // boolean charged;
+    // try {
+    // charged = paymentService.chargeCard(paymentMethodId, currency,
+    // amountInCents);
+    // } catch (StripeException e) {
+    // throw new RuntimeException("Stripe payment failed: " + e.getMessage(), e);
+    // }
+    // if (!charged) {
+    // throw new RuntimeException("Card payment failed");
+    // }
+    // }
+
+    // Transfer.TransferBuilder transferBuilder = Transfer.builder()
+    // .fromUser(fromUser)
+    // .amount(amount)
+    // .status(Transfer.TransferStatus.COMPLETED)
+    // .createdAt(Instant.now());
+
+    // if (toUserId != null) {
+
+    // // the end of the tes
+    // User toUser = userRepository.findById(toUserId)
+    // .orElseThrow(() -> new RuntimeException("Recipient not found"));
+
+    // if (!fromCard) {
+    // fromUser.setBalance(fromUser.getBalance().subtract(amount));
+    // toUser.setBalance(toUser.getBalance().add(amount));
+    // userRepository.save(fromUser);
+    // userRepository.save(toUser);
+    // } else {
+    // // ✅ Card payment → only credit the recipient
+    // toUser.setBalance(toUser.getBalance().add(amount));
+    // userRepository.save(toUser);
+    // }
+
+    // Transfer transfer = transferBuilder
+    // .toUser(toUser)
+    // .beneficiary(null)
+    // .build();
+
+    // transferRepository.save(transfer);
+
+    // // ✅ Add transaction en;ktries for both wallet and card
+    // transactionEntryService.addTransactionEntries(fromUser, toUser, transfer,
+    // fromCard);
+    // return transfer;
+
+    // } else if (beneficiaryId != null) {
+
+    // Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
+    // .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
+
+    // if (!fromCard) {
+    // fromUser.setBalance(fromUser.getBalance().subtract(amount));
+    // userRepository.save(fromUser);
+    // }
+    // // ✅ Card payment: nothing to subtract from wallet
+
+    // Transfer transfer = transferBuilder
+    // .toUser(null)
+    // .beneficiary(beneficiary)
+    // .build();
+
+    // transferRepository.save(transfer);
+
+    // // ✅ Add transaction entry (wallet ùaffected or card payment)
+    // transactionEntryService.addTransactionEntry(fromUser, transfer, fromCard);
+    // return transfer;
+
+    // } else {
+    // throw new IllegalArgumentException("Either toUserId or beneficiaryId must be
+    // provided");
+    // }
+    // }
+
     @Transactional
     public Transfer createTransferWithStripe(
             Long fromUserId,
@@ -236,67 +355,86 @@ public class TransferService {
             BigDecimal amount,
             boolean fromCard) {
 
-        log.info("➡️ Starting transfer: fromUserId={}, toUserId={}, beneficiaryId={}, amount={}, fromCard={}",
-                fromUserId, toUserId, beneficiaryId, amount, fromCard);
-
+        // 1️⃣ Load sender
         User fromUser = userRepository.findById(fromUserId)
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
 
-        log.info("✅ Sender loaded: {}", fromUser.getEmail());
-
-        if (fromCard) {
-            log.info("💳 Processing card payment with Stripe methodId={}", fromUser.getStripePaymentMethodId());
-        } else {
-            log.info("👛 Processing wallet transfer, balance={}", fromUser.getBalance());
-        }
-
+        // 2️⃣ Check wallet case (direct balance transfer)
         if (!fromCard) {
-            // Wallet case → check balance
             if (fromUser.getBalance().compareTo(amount) < 0) {
                 throw new IllegalStateException("Insufficient wallet balance");
             }
         } else {
-            // Card case → Stripe charge
-            String paymentMethodId = fromUser.getStripePaymentMethodId();
+            // // 3️⃣ Card case → ensure a Stripe payment method exists
+            // String paymentMethodId = fromUser.getStripePaymentMethodId();
+            // if (paymentMethodId == null || paymentMethodId.isBlank()) {
+            // throw new IllegalStateException(
+            // "No Stripe payment method found for this user. Attach a card first.");
+            // }
 
-            if (paymentMethodId == null || paymentMethodId.isBlank()) {
-                throw new IllegalStateException(
-                        "No Stripe payment method found for this user. Attach a card first.");
-            }
+            // // Convert amount → cents
+            // String currency = "usd"; // you could also store per-user currency
+            // long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
 
-            String currency = "usd"; // or fromUser.getCurrency()
+            // // 4️⃣ Call Stripe to attempt the charge
+            // boolean charged;
+            // try {
+            // charged = paymentService.chargeCard(paymentMethodId, currency,
+            // amountInCents);
+            // } catch (StripeException e) {
+            // throw new RuntimeException("Stripe payment failed: " + e.getMessage(), e);
+            // }
+
+            // // If charge not successful → stop here
+            // if (!charged) {
+            // throw new RuntimeException("Card payment failed or requires action.");
+            // }
+
+            Card defaultCard = cardRepository.findByUserIdAndIsDefaultTrue(fromUserId)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "No default card found. Please attach a card first."));
+
+            String customerId = fromUser.getStripeCustomerId();
+            String paymentMethodId = defaultCard.getStripePaymentMethodId();
+            String currency = "usd";
             long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
 
             boolean charged;
             try {
-                charged = paymentService.chargeCard(paymentMethodId, currency, amountInCents);
+                charged = paymentService.chargeCard(
+                        customerId,
+                        paymentMethodId,
+                        currency,
+                        amountInCents);
             } catch (StripeException e) {
                 throw new RuntimeException("Stripe payment failed: " + e.getMessage(), e);
             }
+
             if (!charged) {
-                throw new RuntimeException("Card payment failed");
+                throw new RuntimeException("Card payment failed or requires action.");
             }
         }
 
+        // 5️⃣ Build the base Transfer entity
         Transfer.TransferBuilder transferBuilder = Transfer.builder()
                 .fromUser(fromUser)
                 .amount(amount)
-                .status(Transfer.TransferStatus.COMPLETED)
+                .status(Transfer.TransferStatus.COMPLETED) // only set if charge succeeded
                 .createdAt(Instant.now());
 
+        // 6️⃣ Case: transfer to another user
         if (toUserId != null) {
-
-            // the end of the tes
             User toUser = userRepository.findById(toUserId)
                     .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
             if (!fromCard) {
+                // Wallet transfer → subtract and credit
                 fromUser.setBalance(fromUser.getBalance().subtract(amount));
                 toUser.setBalance(toUser.getBalance().add(amount));
                 userRepository.save(fromUser);
                 userRepository.save(toUser);
             } else {
-                // ✅ Card payment → only credit the recipient
+                // Card payment → only credit recipient
                 toUser.setBalance(toUser.getBalance().add(amount));
                 userRepository.save(toUser);
             }
@@ -308,20 +446,23 @@ public class TransferService {
 
             transferRepository.save(transfer);
 
-            // ✅ Add transaction en;ktries for both wallet and card
+            // Create transaction entries (sender/recipient logs)
             transactionEntryService.addTransactionEntries(fromUser, toUser, transfer, fromCard);
+
             return transfer;
+        }
 
-        } else if (beneficiaryId != null) {
-
+        // 7️⃣ Case: transfer to an external beneficiary
+        else if (beneficiaryId != null) {
             Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
                     .orElseThrow(() -> new RuntimeException("Beneficiary not found"));
 
             if (!fromCard) {
+                // Wallet → subtract balance
                 fromUser.setBalance(fromUser.getBalance().subtract(amount));
                 userRepository.save(fromUser);
             }
-            // ✅ Card payment: nothing to subtract from wallet
+            // Card payment → nothing to subtract
 
             Transfer transfer = transferBuilder
                     .toUser(null)
@@ -330,11 +471,14 @@ public class TransferService {
 
             transferRepository.save(transfer);
 
-            // ✅ Add transaction entry (wallet ùaffected or card payment)
+            // Create transaction entry (single-side)
             transactionEntryService.addTransactionEntry(fromUser, transfer, fromCard);
-            return transfer;
 
-        } else {
+            return transfer;
+        }
+
+        // 8️⃣ Invalid call
+        else {
             throw new IllegalArgumentException("Either toUserId or beneficiaryId must be provided");
         }
     }

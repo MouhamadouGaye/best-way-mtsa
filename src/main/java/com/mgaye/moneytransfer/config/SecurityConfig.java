@@ -1,6 +1,9 @@
 package com.mgaye.moneytransfer.config;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -81,8 +84,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // Angular frontend origin
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:4200"));
-
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:4200", "http://localhost:5000"));
         // HTTP methods your frontend will call
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
