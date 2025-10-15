@@ -200,6 +200,8 @@ export interface CardInfo {
 export class TransferService {
   constructor(private api: ApiService, private http: HttpClient) {}
 
+  apiUrl = 'http://localhost:8080/api/entries';
+
   // ✅ Get only current user's beneficiaries
   getBeneficiaries(): Observable<BeneficiaryDTO[]> {
     return this.api.get<BeneficiaryDTO[]>('/beneficiaries');
@@ -241,11 +243,22 @@ export class TransferService {
   // ------------------------------
 
   getUserTail(userId: number): Observable<HistoryItem | null> {
-    return this.http.get<HistoryItem | null>(`/api/users/${userId}/tail`);
+    return this.http.get<HistoryItem | null>(
+      `${this.apiUrl}/user/${userId}/tail`,
+      {
+        withCredentials: true,
+      }
+    );
   }
 
   getEntry(entryId: number): Observable<HistoryItem> {
     return this.http.get<HistoryItem>(`/api/entries/${entryId}`);
+  }
+
+  getUserHistory(userId: number, limit: number) {
+    return this.http.get(
+      `${this.apiUrl}/user/${userId}/history?limit=${limit}`
+    );
   }
 
   getUserHead(userId: number) {
@@ -257,5 +270,11 @@ export class TransferService {
   }
   getCurrentUser() {
     return this.api.get('/users/me');
+  }
+
+  // NEW: Create a transaction entry
+  createEntry(userId: number, transferId: number, amount: number) {
+    const body = { userId, transferId, amount };
+    return this.http.post(`${this.apiUrl}`, body);
   }
 }

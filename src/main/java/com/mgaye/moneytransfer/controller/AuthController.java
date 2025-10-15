@@ -68,7 +68,7 @@ public class AuthController {
             cookie.setPath("/");
             cookie.setSecure(false); // Only over HTTPS
             cookie.setAttribute("SameSite", "Strict");
-            cookie.setMaxAge(24 * 60 * 60); // 24h
+            cookie.setMaxAge(15 * 60); // 24h
             response.addCookie(cookie);
 
             return ResponseEntity.ok().body(Map.of("message", "Login successful"));

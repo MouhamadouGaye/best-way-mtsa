@@ -38,6 +38,8 @@ public class Beneficiary {
 
     private String countryCode;
 
+    private String currency;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     @JsonIgnore

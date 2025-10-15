@@ -46,6 +46,10 @@ export class TransactionHistoryComponent implements OnInit {
   }
 
   private loadHistory() {
+    if (!this.userId) {
+      console.warn('User ID is not set, skipping history load.');
+      return;
+    }
     this.transferService.getUserTail(this.userId).subscribe({
       next: (tail: any) => {
         if (!tail) {
@@ -54,6 +58,7 @@ export class TransactionHistoryComponent implements OnInit {
           return;
         }
         this.traverseBackward(tail); // 🔥 walk backwards from tail
+        // console.log('Tail found:', this.traverseBackward(tail));
       },
       error: (err: any) => {
         this.errorMessage = 'Could not load transaction history';

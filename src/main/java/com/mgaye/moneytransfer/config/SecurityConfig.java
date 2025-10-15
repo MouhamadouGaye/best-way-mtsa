@@ -1,6 +1,9 @@
 package com.mgaye.moneytransfer.config;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -77,11 +80,39 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // @Bean
+    // public CorsConfigurationSource corsConfigurationSource() {
+    // CorsConfiguration configuration = new CorsConfiguration();
+    // // Angular frontend origin
+    // configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:4200",
+    // "http://localhost:5000"));
+    // // HTTP methods your frontend will call
+    // configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE",
+    // "OPTIONS"));
+
+    // // Allow all headers
+    // configuration.setAllowedHeaders(Arrays.asList("*"));
+
+    // // VERY IMPORTANT: allow cookies/credentials
+    // configuration.setAllowCredentials(true);
+
+    // UrlBasedCorsConfigurationSource source = new
+    // UrlBasedCorsConfigurationSource();
+    // source.registerCorsConfiguration("/**", configuration);
+    // return source;
+    // }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Angular frontend origin
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:4200"));
+
+        // Expo / web development origins
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:19006", // Expo web
+                "http://192.168.1.100:19006", // web on LAN
+                "exp://192.168.1.100:8081" // Expo Go / device
+
+        ));
 
         // HTTP methods your frontend will call
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -89,7 +120,7 @@ public class SecurityConfig {
         // Allow all headers
         configuration.setAllowedHeaders(Arrays.asList("*"));
 
-        // VERY IMPORTANT: allow cookies/credentials
+        // Allow cookies/credentials
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

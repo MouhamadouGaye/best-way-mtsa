@@ -7,13 +7,13 @@ import { ApiService } from './api.service';
   providedIn: 'root',
 })
 export class UserService {
-  constructor(private http: HttpClient, private api: ApiService) {}
+  constructor(private api: ApiService) {}
 
   attachPaymentMethod(
     userId: number,
     paymentMethodId: string
   ): Observable<any> {
-    return this.api.post(`users/${userId}/payment-method`, {
+    return this.api.post(`/users/${userId}/payment-method`, {
       paymentMethodId,
     });
   }

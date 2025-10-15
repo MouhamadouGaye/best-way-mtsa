@@ -6,6 +6,13 @@ target/
 !**/money-transfer-frontend/node_modules
 money-transfer-frontend/node_modules
 
+!**/send-and-receive/node_modules
+send-and-receive/node_modules
+
+!**/mobile-device
+mobile-device
+/**/mobile-device
+
 ### STS ###
 .apt_generated
 .classpath

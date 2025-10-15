@@ -40,6 +40,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<TransactionEntry> transactionEntry; // this was add for strype payment
 
+    @Column(name = "stripe_customer_id", unique = true)
+    private String stripeCustomerId; // ✅ add this
+
     @Column(name = "stripe_payment_method_id", unique = true)
     private String stripePaymentMethodId; // this was add for strype payment service
 
@@ -53,3 +56,82 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }
+
+// @Entity
+// @Table(name = "users")
+// @Getter
+// @Setter
+// @NoArgsConstructor
+// @AllArgsConstructor
+// @Builder
+// public class User {
+// @Id
+// @GeneratedValue(strategy = GenerationType.IDENTITY)
+// private Long id;
+
+// // ----------------------------
+// // 🔐 Authentication
+// // ----------------------------
+// @Column(nullable = false, unique = true)
+// private String username;
+
+// @Column(nullable = false, unique = true)
+// private String email;
+
+// @Column(nullable = false)
+// private String password; // Always store as bcrypt hash
+
+// // ----------------------------
+// // 📱 Contact & Regional info
+// // ----------------------------
+// @Column(nullable = false, unique = true, length = 20)
+// private String phoneNumber; // Always in E.164 format (+221772334455)
+
+// @Column(length = 4)
+// private String countryCode; // ISO code, e.g., "SN"
+
+// @Column(length = 8)
+// private String currency; // ISO currency code, e.g., "XOF"
+
+// @Column(length = 4)
+// private String prefix; // optional, like "+221"
+
+// // ----------------------------
+// // 💰 Financial data
+// // ----------------------------
+// @Column(nullable = false, precision = 19, scale = 4)
+// private BigDecimal balance = BigDecimal.ZERO;
+
+// // Stripe integration
+// @Column(name = "stripe_customer_id", unique = true)
+// private String stripeCustomerId;
+
+// @Column(name = "stripe_payment_method_id", unique = true)
+// private String stripePaymentMethodId;
+
+// // ----------------------------
+// // 💳 Relations
+// // ----------------------------
+// @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval =
+// true, fetch = FetchType.LAZY)
+// private List<Card> cards = new ArrayList<>();
+
+// @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval =
+// true, fetch = FetchType.LAZY)
+// private List<TransactionEntry> transactionEntries = new ArrayList<>();
+
+// // ----------------------------
+// // ⛓️ Linked transactions (optional)
+// // ----------------------------
+// @Column(name = "head_entry_id")
+// private Long headEntryId;
+
+// @Column(name = "tail_entry_id")
+// private Long tailEntryId;
+
+// // ----------------------------
+// // 🕓 Metadata
+// // ----------------------------
+// @Column(name = "created_at", nullable = false, updatable = false)
+// private Instant createdAt = Instant.now();
+// }
