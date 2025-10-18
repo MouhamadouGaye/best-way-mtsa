@@ -1,6 +1,7 @@
 
 package com.mgaye.moneytransfer.controller;
 
+import com.mgaye.moneytransfer.dto.request.LoginRequest;
 import com.mgaye.moneytransfer.entity.User;
 import com.mgaye.moneytransfer.security.JwtUtil;
 import com.mgaye.moneytransfer.service.UserService;
@@ -88,25 +89,4 @@ public class AuthController {
         return ResponseEntity.ok().body(Map.of("Error", "Logged out successfully"));
     }
 
-    public static class LoginRequest {
-        private String email;
-        private String password;
-
-        // getters/setters
-        public String getEmail() {
-            return email;
-        }
-
-        public void setEmail(String email) {
-            this.email = email;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-    }
 }

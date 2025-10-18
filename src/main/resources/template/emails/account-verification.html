@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="emails/base :: layout(~{::content})"
+>
+  <head></head>
+  <body>
+    <div th:fragment="content">
+      <h1 class="greeting">Verify Your Email Address</h1>
+
+      <p class="content">Hello <span th:text="${username}">User</span>,</p>
+
+      <p class="content">
+        Please verify your email address to complete your
+        <span th:text="${companyName}">MoneyTransfer</span> account setup and
+        ensure its security.
+      </p>
+
+      <div style="text-align: center; margin: 30px 0">
+        <a th:href="${verificationUrl}" class="button">Verify Email Address</a>
+      </div>
+
+      <div class="alert-warning">
+        <strong>Important:</strong> This verification link will expire in 24
+        hours for security reasons.
+      </div>
+
+      <p class="content">
+        If the button doesn't work, copy and paste this link into your browser:
+      </p>
+
+      <div class="highlight-box">
+        <code th:text="${verificationUrl}"></code>
+      </div>
+
+      <p class="content">
+        If you didn't create an account with us, please ignore this email.
+      </p>
+    </div>
+  </body>
+</html>

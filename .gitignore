@@ -12,7 +12,8 @@ send-and-receive/node_modules
 !**/mobile-device
 mobile-device
 /**/mobile-device
-
+/env
+.env
 ### STS ###
 .apt_generated
 .classpath

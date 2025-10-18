@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${subject}">MoneyTransfer</title>
+    <style>
+      /* Modern CSS Reset */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* Base Styles */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f8fafc;
+      }
+
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+
+      .email-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 40px;
+        text-align: center;
+      }
+
+      .email-logo {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      .email-tagline {
+        opacity: 0.9;
+        font-size: 16px;
+      }
+
+      .email-body {
+        padding: 40px;
+      }
+
+      .greeting {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #1a202c;
+      }
+
+      .content {
+        font-size: 16px;
+        color: #4a5568;
+        margin-bottom: 25px;
+      }
+
+      .highlight-box {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 25px 0;
+      }
+
+      .button {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        padding: 14px 32px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        text-align: center;
+        margin: 20px 0;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .info-item {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+      }
+
+      .info-label {
+        font-size: 12px;
+        color: #718096;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      .info-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: #2d3748;
+      }
+
+      .alert-warning {
+        background: #fffaf0;
+        border: 1px solid #feebc8;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 25px 0;
+        border-left: 4px solid #ed8936;
+      }
+
+      .alert-success {
+        background: #f0fff4;
+        border: 1px solid #c6f6d5;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 25px 0;
+        border-left: 4px solid #48bb78;
+      }
+
+      .alert-error {
+        background: #fed7d7;
+        border: 1px solid #feb2b2;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 25px 0;
+        border-left: 4px solid #e53e3e;
+      }
+
+      .email-footer {
+        background: #f7fafc;
+        padding: 30px 40px;
+        text-align: center;
+        color: #718096;
+        font-size: 14px;
+      }
+
+      .social-links {
+        margin: 20px 0;
+      }
+
+      .social-link {
+        display: inline-block;
+        margin: 0 10px;
+        color: #667eea;
+        text-decoration: none;
+      }
+
+      .footer-links {
+        margin-top: 15px;
+      }
+
+      .footer-link {
+        color: #718096;
+        text-decoration: none;
+        margin: 0 10px;
+        font-size: 13px;
+      }
+
+      .footer-link:hover {
+        color: #667eea;
+      }
+
+      /* Responsive */
+      @media (max-width: 600px) {
+        .email-body {
+          padding: 30px 20px;
+        }
+        .email-header {
+          padding: 25px 20px;
+        }
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <div class="email-logo" th:text="${companyName}">MoneyTransfer</div>
+        <div class="email-tagline">Secure. Fast. Global.</div>
+      </div>
+
+      <div class="email-body">
+        <!-- Content will be inserted here by child templates -->
+        <div th:replace="${content}"></div>
+      </div>
+
+      <div class="email-footer">
+        <div class="social-links">
+          <a href="#" class="social-link">Twitter</a>
+          <a href="#" class="social-link">Facebook</a>
+          <a href="#" class="social-link">LinkedIn</a>
+        </div>
+        <p>
+          © 2024 <span th:text="${companyName}">MoneyTransfer</span>. All rights
+          reserved.
+        </p>
+        <div class="footer-links">
+          <a href="#" class="footer-link">Privacy Policy</a>
+          <a href="#" class="footer-link">Terms of Service</a>
+          <a
+            th:href="'mailto:' + ${supportEmail}"
+            class="footer-link"
+            th:text="'Contact Support'"
+            >Contact Support</a
+          >
+        </div>
+        <p style="margin-top: 15px; font-size: 12px; color: #a0aec0">
+          This is an automated message. Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

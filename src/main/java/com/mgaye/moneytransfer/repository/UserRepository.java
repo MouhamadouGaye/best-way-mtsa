@@ -11,11 +11,30 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByPhoneNumber(String phoneNumber);
+
     Optional<User> findByUsername(String username);
 
-    Optional<User> findByEmail(String email);
+    // ✅ ADD THIS MISSING METHOD
+    Optional<User> findByEmailVerificationToken(String token);
+
+    // ✅ ADD THESE ADDITIONAL METHODS FOR SECURITY
+    boolean existsByEmail(String email);
+
+    boolean existsByUsername(String username);
+
+    boolean existsByPhoneNumber(String phoneNumber);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("SELECT u FROM User u WHERE u.pendingEmail = :email")
+    Optional<User> findByPendingEmail(@Param("email") String email);
+
+    @Query("SELECT u FROM User u WHERE u.stripeCustomerId = :stripeCustomerId")
+    Optional<User> findByStripeCustomerId(@Param("stripeCustomerId") String stripeCustomerId);
+
 }

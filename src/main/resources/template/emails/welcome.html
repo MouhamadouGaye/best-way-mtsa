@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="emails/base :: layout(~{::content})"
+>
+  <head></head>
+  <body>
+    <div th:fragment="content">
+      <h1 class="greeting">
+        Welcome to <span th:text="${companyName}">MoneyTransfer</span>,
+        <span th:text="${username}">User</span>! 🎉
+      </h1>
+
+      <p class="content">
+        We're thrilled to have you on board. Your account has been successfully
+        created and you're now ready to start sending and receiving money
+        globally.
+      </p>
+
+      <div class="alert-success">
+        <strong>Get Started:</strong> Verify your email address to unlock all
+        features and ensure the security of your account.
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Fast Transfers</div>
+          <div class="info-value">Send money in minutes</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Low Fees</div>
+          <div class="info-value">Competitive rates</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Global Reach</div>
+          <div class="info-value">150+ countries</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Secure</div>
+          <div class="info-value">Bank-level security</div>
+        </div>
+      </div>
+
+      <p class="content">
+        If you have any questions, our support team is here to help at
+        <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}"
+          >support</a
+        >.
+      </p>
+
+      <p class="content">
+        Happy transferring!<br />The
+        <span th:text="${companyName}">MoneyTransfer</span> Team
+      </p>
+    </div>
+  </body>
+</html>

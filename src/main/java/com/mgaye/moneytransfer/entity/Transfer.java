@@ -45,6 +45,6 @@ public class Transfer {
     private Beneficiary beneficiary; // optionnel
 
     public enum TransferStatus {
-        PENDING, COMPLETED, FAILED
+        PENDING, COMPLETED, FAILED, PENDING_REVIEW, REJECTED
     }
 }
