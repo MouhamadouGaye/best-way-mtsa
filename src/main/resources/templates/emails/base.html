@@ -205,7 +205,8 @@
 
       <div class="email-body">
         <!-- Content will be inserted here by child templates -->
-        <div th:replace="${content}"></div>
+        <!-- <div th:replace="${content}"></div> -->
+        <div th:replace="~{${content}}"></div>
       </div>
 
       <div class="email-footer">

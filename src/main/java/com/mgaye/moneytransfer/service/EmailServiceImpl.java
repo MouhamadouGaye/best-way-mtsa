@@ -25,16 +25,16 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.base-url:http://localhost:8080}")
     private String baseUrl;
 
-    @Value("${app.support-email:support@moneytransfer.com}")
+    @Value("${app.support-email}")
     private String supportEmail;
 
-    @Value("${app.company-name:MoneyTransfer App}")
+    @Value("${app.company-name}")
     private String companyName;
 
-    @Value("${app.admin-email:admin@moneytransfer.com}")
+    @Value("${app.admin-email}")
     private String adminEmail;
 
-    @Value("${app.admin-email:noreply@moneytransfer.com}")
+    @Value("${app.admin-email}")
     private String noreplyEmail;
 
     public EmailServiceImpl(JavaMailSender mailSender, TemplateEngine templateEngine) {

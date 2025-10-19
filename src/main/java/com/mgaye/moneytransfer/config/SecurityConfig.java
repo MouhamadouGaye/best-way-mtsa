@@ -71,7 +71,7 @@ public class SecurityConfig {
         http.csrf().disable()
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // <--- apply CORS
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/register", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/users/register", "/api/auth/login", "/api/public/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
