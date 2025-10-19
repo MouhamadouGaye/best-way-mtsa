@@ -1,0 +1,23 @@
+# Check current versions
+npm list react react-dom react-native-renderer
+
+# Update to matching versions (choose one approach):
+
+# Approach 1: Update react-native-renderer to match React 19.2.0
+npm install react-native-renderer@19.2.0
+
+# Approach 2: Or downgrade React to match react-native-renderer 19.1.0
+npm install react@19.1.0 react-dom@19.1.0
+
+# Approach 3: If using Expo, check compatible versions
+expo doctor --fix-dependencies
+
+
+npm install react-native-vector-icons
+npm install @react-navigation/bottom-tabs
+# or if using Expo
+expo install react-native-vector-icons @react-navigation/bottom-tabs
+
+
+
+npm i --save-dev @types/react-native-vector-icons     // when it refuse to work because of the type

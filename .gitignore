@@ -10,8 +10,8 @@ money-transfer-frontend/node_modules
 send-and-receive/node_modules
 
 !**/mobile-device
-mobile-device
-/**/mobile-device
+mobile-device/send-receive/node_modules
+/**/mobile-device/send-receive/node_modules
 /env
 .env
 ### STS ###
