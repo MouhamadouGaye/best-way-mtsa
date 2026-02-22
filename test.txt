@@ -1,0 +1,162 @@
+curl -X POST http://localhost:8080/api/users/register \
+ -H "Content-Type: application/json" \
+ -d '{"username":"alice","email":"a@ex.com","password":"secret"}'
+
+
+curl -X POST http://localhost:8080/api/transfers \
+ -H "Content-Type: application/json" \
+ -d '{"fromUserId":1,"toUserId":2,"amount":200.00}'
+
+
+-------Retrieve user head/tail and walk:
+curl http://localhost:8080/api/entries/user/1/tail
+curl http://localhost:8080/api/entries/{entryId}
+
+
+
+  <dependencies>
+    <!-- Spring Boot -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <!-- PostgreSQL -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- For JSON serialization -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+    </dependency>
+
+    <!-- Optional: Devtools -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+
+	<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-security</artifactId>
+	</dependency>
+	<dependency>
+		<groupId>io.jsonwebtoken</groupId>
+		<artifactId>jjwt-api</artifactId>
+		<version>0.11.5</version>
+	</dependency>
+	<dependency>
+		<groupId>io.jsonwebtoken</groupId>
+		<artifactId>jjwt-impl</artifactId>
+		<version>0.11.5</version>
+		<scope>runtime</scope>
+	</dependency>
+	<dependency>
+		<groupId>io.jsonwebtoken</groupId>
+		<artifactId>jjwt-jackson</artifactId>
+		<version>0.11.5</version>
+		<scope>runtime</scope>
+	</dependency>
+
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+
+
+spring.application.name=moneytransfer
+spring.datasource.url=${SPRING_DATASOURCE_URL}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jackson.serialization.WRITE_DATES_AS_TIMESTAMPS=false
+jwt.secret=${JWT_SECRET}
+
+stripe.secret-key=${STRIPE_SECRET_KEY}
+
+
+# Email Configuration
+spring.mail.host=${SPRING_MAIL_HOST}
+spring.mail.port=${SPRING_MAIL_PORT:587}
+spring.mail.username=${SPRING_MAIL_USERNAME}
+spring.mail.password=${SPRING_MAIL_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# App Configuration
+app.base-url=${APP_BASE_URL}
+app.support-email=${APP_SUPPORT_EMAIL}
+app.company-name=${APP_COMPANY_NAME}
+app.admin-email=${APP_ADMIN_EMAIL}
+
+# Thymeleaf Configuration
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.mode=HTML
+spring.thymeleaf.encoding=UTF-8
+spring.thymeleaf.cache=false
+
+
+# Email Configuration
+
+
+
+# mvn spring-boot:run -Dspring-boot.run.arguments="--debug"
+
+
+
+# Run the application
+mvn spring-boot:run
+
+# Clean and run
+mvn clean spring-boot:run
+
+# Compile and run tests
+mvn clean compile test
+
+# Package the application
+mvn clean package
+
+# Just compile
+mvn compile
+
+# Run tests only
+mvn test
+
+
+
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const isValidPhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    return phoneRegex.test(phone);
+  };

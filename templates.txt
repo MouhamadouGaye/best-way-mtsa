@@ -1,0 +1,110 @@
+1. Template HTML (Jinja2) ----------------------------
+<select name="prefix">
+    <option value="">-- Select code --</option>
+    {% for c in country_prefixes %}
+        <option value="{{ c.prefix }}">
+            {{ c.prefix }}
+        </option>
+    {% endfor %}
+</select>
+2. Thymeleaf template ---------------------------------
+
+<select th:field="*{prefix}">
+    <option value="">-- Select code --</option>
+    <option th:each="c : ${countryPrefixes}"
+            th:value="${c.prefix}"
+            th:text="${c.prefix}">
+    </option>
+</select>
+
+3. React jsx for ootion -------------------------------
+
+import { useState } from "react";
+
+function PrefixSelect({ countryPrefixes }) {
+  const [prefix, setPrefix] = useState("");
+
+  return (
+    <select
+      value={prefix}
+      onChange={(e) => setPrefix(e.target.value)}
+    >
+      <option value="">-- Select code --</option>
+      {countryPrefixes.map((c, index) => (
+        <option key={index} value={c.prefix}>
+          {c.prefix}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export default PrefixSelect;
+
+
+4. Template jinja2 (python) ---------------------------
+
+<select name="prefix">
+    <option value="">-- Select code --</option>
+    {% for c in country_prefixes %}
+        <option value="{{ c.prefix }}">
+            {{ c.prefix }}
+        </option>
+    {% endfor %}
+</select>
+
+-------------------------------------------------------
+
+
+
+## For Development/Docker:
+
+frontend:
+  build:
+    context: ./money-transfer-frontend
+    dockerfile: Dockerfile
+  container_name: moneytransfer-frontend
+  ports:
+    - "4200:80"
+  environment:
+    - API_URL=http://backend:8080/api  # Docker service name
+    - BACKEND_URL=http://backend:8080
+    - PRODUCTION=false
+    - DEBUG=true
+  depends_on:
+    - backend
+
+## For Production (example):
+
+frontend:
+  build:
+    context: ./money-transfer-frontend
+    dockerfile: Dockerfile
+  container_name: moneytransfer-frontend-prod
+  ports:
+    - "80:80"
+    - "443:443"  # For HTTPS
+  environment:
+    - API_URL=https://api.yourdomain.com/api  # Production API
+    - BACKEND_URL=http://backend:8080  # Internal backend
+    - PRODUCTION=true
+    - DEBUG=false
+  volumes:
+    - ./ssl:/etc/nginx/ssl:ro  # SSL certificates
+
+## Now you can use the same Dockerfile for all environments:
+# Build once
+docker build -t my-angular-app .
+
+# Run with different environment variables
+# Development:
+docker run -p 4200:80 \
+  -e API_URL=http://localhost:8080/api \
+  -e PRODUCTION=false \
+  my-angular-app
+
+# Production:
+docker run -p 80:80 \
+  -e API_URL=https://api.yourdomain.com/api \
+  -e PRODUCTION=true \
+  my-angular-app

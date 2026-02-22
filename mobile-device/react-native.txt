@@ -1,0 +1,2127 @@
+# Installer React Native CLI si nécessaire
+npm install -g react-native-cli 
+npx create-expo-app send-receive --template expo-template-blank-typescript
+  // with expo 
+
+# Créer un nouveau projet
+npx react-native init MoneyTransferApp
+
+# Remplacer le contenu de App.js avec le code fourni
+
+# Lancer l'app
+npx react-native run-android
+# ou
+npx react-native run-ios
+
+
+
+
+// App.js - Complete Money Transfer React Native MVP
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  Alert,
+  FlatList,
+  Modal,
+  ActivityIndicator
+} from 'react-native';
+
+// API Configuration
+const API_URL = 'http://localhost:8080/api';
+
+// Currency Conversion Rates (You can replace with real-time API)
+const EXCHANGE_RATES = {
+  USD: 1,
+  EUR: 0.92,
+  GBP: 0.79,
+  CAD: 1.36,
+  AUD: 1.52,
+  JPY: 149.50,
+  CNY: 7.24,
+  INR: 83.12,
+  NGN: 775.50,
+  ZAR: 18.65,
+  XOF: 603.50, // West African CFA
+  XAF: 603.50, // Central African CFA
+  MAD: 10.12,
+  EGP: 30.90
+};
+
+const COUNTRIES_CURRENCIES = [
+  { code: 'US', name: 'United States', currency: 'USD', flag: '🇺🇸' },
+  { code: 'EU', name: 'European Union', currency: 'EUR', flag: '🇪🇺' },
+  { code: 'GB', name: 'United Kingdom', currency: 'GBP', flag: '🇬🇧' },
+  { code: 'CA', name: 'Canada', currency: 'CAD', flag: '🇨🇦' },
+  { code: 'AU', name: 'Australia', currency: 'AUD', flag: '🇦🇺' },
+  { code: 'JP', name: 'Japan', currency: 'JPY', flag: '🇯🇵' },
+  { code: 'CN', name: 'China', currency: 'CNY', flag: '🇨🇳' },
+  { code: 'IN', name: 'India', currency: 'INR', flag: '🇮🇳' },
+  { code: 'NG', name: 'Nigeria', currency: 'NGN', flag: '🇳🇬' },
+  { code: 'ZA', name: 'South Africa', currency: 'ZAR', flag: '🇿🇦' },
+  { code: 'SN', name: 'Senegal', currency: 'XOF', flag: '🇸🇳' },
+  { code: 'CI', name: 'Côte d\'Ivoire', currency: 'XOF', flag: '🇨🇮' },
+  { code: 'CM', name: 'Cameroon', currency: 'XAF', flag: '🇨🇲' },
+  { code: 'MA', name: 'Morocco', currency: 'MAD', flag: '🇲🇦' },
+  { code: 'EG', name: 'Egypt', currency: 'EGP', flag: '🇪🇬' }
+];
+
+// ============= AUTH CONTEXT =============
+const AuthContext = createContext(null);
+
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetch(`${API_URL}/users/me`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+      }
+    } catch (err) {
+      console.error('Auth check failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (email, password) => {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.ok) throw new Error('Login failed');
+    await checkAuth();
+  };
+
+  const register = async (username, email, password, phoneNumber) => {
+    const res = await fetch(`${API_URL}/users/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username, email, password, phoneNumber })
+    });
+    if (!res.ok) throw new Error('Registration failed');
+    return res.json();
+  };
+
+  const logout = async () => {
+    await fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    setUser(null);
+  };
+
+  const updateUser = (userData) => {
+    setUser(userData);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+const useAuth = () => useContext(AuthContext);
+
+// ============= CURRENCY CONVERTER =============
+const convertCurrency = (amount, fromCurrency, toCurrency) => {
+  if (!amount || amount <= 0) return 0;
+  const amountInUSD = amount / EXCHANGE_RATES[fromCurrency];
+  const convertedAmount = amountInUSD * EXCHANGE_RATES[toCurrency];
+  return convertedAmount;
+};
+
+// ============= LOGIN SCREEN =============
+const LoginScreen = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    try {
+      await login(email, password);
+    } catch (err) {
+      Alert.alert('Error', 'Invalid credentials');
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.gradientHeader}>
+        <View style={styles.logoContainer}>
+          <View style={styles.logo}>
+            <Text style={styles.logoText}>💸</Text>
+          </View>
+          <Text style={styles.title}>MoneyTransfer</Text>
+          <Text style={styles.subtitle}>Send & Receive Money Globally</Text>
+        </View>
+      </View>
+
+      <View style={styles.formContainer}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+        </View>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+          <Text style={styles.primaryButtonText}>Login</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation('register')}
+        >
+          <Text style={styles.secondaryButtonText}>
+            Don't have an account? Register
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+// ============= REGISTER SCREEN =============
+const RegisterScreen = ({ navigation }) => {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+    country: 'US',
+    currency: 'USD'
+  });
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const { register } = useAuth();
+
+  const handleRegister = async () => {
+    if (!formData.username || !formData.email || !formData.password || !formData.phoneNumber) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    try {
+      await register(formData.username, formData.email, formData.password, formData.phoneNumber);
+      Alert.alert('Success', 'Account created successfully!');
+      navigation('login');
+    } catch (err) {
+      Alert.alert('Error', 'Registration failed. Please try again.');
+    }
+  };
+
+  const selectedCountry = COUNTRIES_CURRENCIES.find(c => c.code === formData.country);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation('login')} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Account</Text>
+      </View>
+
+      <ScrollView style={styles.formContainer}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Username</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="johndoe"
+            value={formData.username}
+            onChangeText={(text) => setFormData({ ...formData, username: text })}
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="you@example.com"
+            value={formData.email}
+            onChangeText={(text) => setFormData({ ...formData, email: text })}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Phone Number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="+1234567890"
+            value={formData.phoneNumber}
+            onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Country & Currency</Text>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => setShowCountryPicker(true)}
+          >
+            <Text style={styles.pickerButtonText}>
+              {selectedCountry.flag} {selectedCountry.name} ({selectedCountry.currency})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            value={formData.password}
+            onChangeText={(text) => setFormData({ ...formData, password: text })}
+            secureTextEntry
+          />
+        </View>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleRegister}>
+          <Text style={styles.primaryButtonText}>Create Account</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Country Picker Modal */}
+      <Modal
+        visible={showCountryPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCountryPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Country</Text>
+              <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={COUNTRIES_CURRENCIES}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.countryItem}
+                  onPress={() => {
+                    setFormData({ ...formData, country: item.code, currency: item.currency });
+                    setShowCountryPicker(false);
+                  }}
+                >
+                  <Text style={styles.countryFlag}>{item.flag}</Text>
+                  <View style={styles.countryInfo}>
+                    <Text style={styles.countryName}>{item.name}</Text>
+                    <Text style={styles.countryCurrency}>{item.currency}</Text>
+                  </View>
+                  {formData.country === item.code && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
+// ============= HOME SCREEN =============
+const HomeScreen = ({ navigation }) => {
+  const { user, logout } = useAuth();
+  const [balance, setBalance] = useState(0);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setRefreshing(true);
+    try {
+      const historyRes = await fetch(
+        `${API_URL}/entries/user/${user.id}/history?limit=5`,
+        { credentials: 'include' }
+      );
+      if (historyRes.ok) {
+        const history = await historyRes.json();
+        setRecentTransactions(history);
+      }
+
+      const tailRes = await fetch(
+        `${API_URL}/entries/user/${user.id}/tail`,
+        { credentials: 'include' }
+      );
+      if (tailRes.ok) {
+        const tail = await tailRes.json();
+        setBalance(tail?.balance || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Logout', onPress: logout }
+    ]);
+  };
+
+  const userCurrency = user?.currency || 'USD';
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      <View style={styles.homeHeader}>
+        <View>
+          <Text style={styles.welcomeText}>Welcome back,</Text>
+          <Text style={styles.userName}>{user?.username}</Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        refreshControl={
+          <ActivityIndicator refreshing={refreshing} onRefresh={loadData} />
+        }
+      >
+        <View style={styles.balanceCard}>
+          <Text style={styles.balanceLabel}>Total Balance</Text>
+          <Text style={styles.balanceAmount}>
+            {userCurrency} {balance.toFixed(2)}
+          </Text>
+          <View style={styles.cardActions}>
+            <TouchableOpacity style={styles.cardButton}>
+              <Text style={styles.cardButtonText}>💳 Add Card</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cardButton}>
+              <Text style={styles.cardButtonText}>👛 Top Up</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation('send')}
+          >
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionEmoji}>📤</Text>
+            </View>
+            <Text style={styles.actionText}>Send Money</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation('receive')}
+          >
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionEmoji}>📥</Text>
+            </View>
+            <Text style={styles.actionText}>Receive</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation('history')}
+          >
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionEmoji}>📋</Text>
+            </View>
+            <Text style={styles.actionText}>History</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation('beneficiaries')}
+          >
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionEmoji}>👥</Text>
+            </View>
+            <Text style={styles.actionText}>Beneficiaries</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          {recentTransactions.length === 0 ? (
+            <Text style={styles.emptyText}>No transactions yet</Text>
+          ) : (
+            recentTransactions.map((item) => (
+              <View key={item.id} style={styles.transactionItem}>
+                <View style={styles.transactionIcon}>
+                  <Text>{item.amount > 0 ? '📥' : '📤'}</Text>
+                </View>
+                <View style={styles.transactionDetails}>
+                  <Text style={styles.transactionTitle}>
+                    {item.amount > 0 ? 'Received' : 'Sent'}
+                  </Text>
+                  <Text style={styles.transactionDate}>
+                    {new Date(item.timestamp).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.transactionAmount,
+                  item.amount > 0 ? styles.positiveAmount : styles.negativeAmount
+                ]}>
+                  {item.amount > 0 ? '+' : ''}{userCurrency} {Math.abs(item.amount).toFixed(2)}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+// ============= SEND MONEY SCREEN =============
+const SendMoneyScreen = ({ navigation }) => {
+  const { user } = useAuth();
+  const [step, setStep] = useState(1);
+  const [recipientType, setRecipientType] = useState('external');
+  const [selectedRecipient, setSelectedRecipient] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [convertedAmount, setConvertedAmount] = useState(0);
+  const [transferHistory, setTransferHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadBeneficiaries();
+    loadUsers();
+    loadTransferHistory();
+  }, []);
+
+  useEffect(() => {
+    if (amount && selectedRecipient) {
+      const fromCurrency = user?.currency || 'USD';
+      const toCurrency = selectedRecipient.currency || 'USD';
+      const converted = convertCurrency(parseFloat(amount), fromCurrency, toCurrency);
+      setConvertedAmount(converted);
+    }
+  }, [amount, selectedRecipient]);
+
+  const loadBeneficiaries = async () => {
+    try {
+      const res = await fetch(`${API_URL}/beneficiaries`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBeneficiaries(data);
+      }
+    } catch (err) {
+      console.error('Failed to load beneficiaries:', err);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const res = await fetch(`${API_URL}/users`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.filter(u => u.id !== user.id));
+      }
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    }
+  };
+
+  const loadTransferHistory = async () => {
+    try {
+      const res = await fetch(`${API_URL}/transfers`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTransferHistory(data.slice(0, 10));
+      }
+    } catch (err) {
+      console.error('Failed to load transfer history:', err);
+    }
+  };
+
+  const handleSendMoney = async () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/transfers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          fromUserId: user.id,
+          toUserId: recipientType === 'internal' ? selectedRecipient.id : null,
+          beneficiaryId: recipientType === 'external' ? selectedRecipient.id : null,
+          amount: parseFloat(amount),
+          fromCard: paymentMethod === 'card'
+        })
+      });
+
+      if (res.ok) {
+        Alert.alert('Success', `Money sent successfully! ${selectedRecipient.name} will receive ${selectedRecipient.currency} ${convertedAmount.toFixed(2)}`);
+        setAmount('');
+        setSelectedRecipient(null);
+        setStep(1);
+        loadTransferHistory();
+      } else {
+        Alert.alert('Error', 'Transfer failed');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const userCurrency = user?.currency || 'USD';
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation('home')} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Send Money</Text>
+      </View>
+
+      <ScrollView style={styles.content}>
+        {/* Step 1: Select Recipient Type */}
+        {step === 1 && (
+          <View>
+            <Text style={styles.stepTitle}>Who do you want to send to?</Text>
+            <TouchableOpacity
+              style={[styles.optionCard, recipientType === 'internal' && styles.optionCardSelected]}
+              onPress={() => setRecipientType('internal')}
+            >
+              <Text style={styles.optionEmoji}>👤</Text>
+              <Text style={styles.optionTitle}>Internal User</Text>
+              <Text style={styles.optionSubtitle}>Send to app users instantly</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.optionCard, recipientType === 'external' && styles.optionCardSelected]}
+              onPress={() => setRecipientType('external')}
+            >
+              <Text style={styles.optionEmoji}>🏦</Text>
+              <Text style={styles.optionTitle}>Beneficiary</Text>
+              <Text style={styles.optionSubtitle}>Send to saved bank accounts</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={() => setStep(2)}>
+              <Text style={styles.primaryButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Step 2: Select Recipient */}
+        {step === 2 && (
+          <View>
+            <TouchableOpacity onPress={() => setStep(1)} style={styles.backLink}>
+              <Text style={styles.backLinkText}>← Change recipient type</Text>
+            </TouchableOpacity>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.stepTitle}>
+                Select {recipientType === 'internal' ? 'User' : 'Beneficiary'}
+              </Text>
+              {recipientType === 'external' && (
+                <TouchableOpacity onPress={() => navigation('addBeneficiary')}>
+                  <Text style={styles.addButtonText}>+ Add New</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {recipientType === 'internal' ? (
+              users.length === 0 ? (
+                <Text style={styles.emptyText}>No users available</Text>
+              ) : (
+                users.map((u) => (
+                  <TouchableOpacity
+                    key={u.id}
+                    style={[styles.recipientCard, selectedRecipient?.id === u.id && styles.recipientCardSelected]}
+                    onPress={() => setSelectedRecipient(u)}
+                  >
+                    <View style={styles.recipientAvatar}>
+                      <Text style={styles.recipientAvatarText}>{u.username[0].toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.recipientInfo}>
+                      <Text style={styles.recipientName}>{u.username}</Text>
+                      <Text style={styles.recipientEmail}>{u.email}</Text>
+                      <Text style={styles.recipientCurrency}>Currency: {u.currency || 'USD'}</Text>
+                    </View>
+                    {selectedRecipient?.id === u.id && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )
+            ) : (
+              beneficiaries.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No beneficiaries yet</Text>
+                  <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={() => navigation('addBeneficiary')}
+                  >
+                    <Text style={styles.primaryButtonText}>Add Beneficiary</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                beneficiaries.map((b) => (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={[styles.recipientCard, selectedRecipient?.id === b.id && styles.recipientCardSelected]}
+                    onPress={() => setSelectedRecipient(b)}
+                  >
+                    <View style={styles.recipientAvatar}>
+                      <Text style={styles.recipientAvatarText}>{b.name[0].toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.recipientInfo}>
+                      <Text style={styles.recipientName}>{b.name}</Text>
+                      <Text style={styles.recipientEmail}>{b.accountNumber}</Text>
+                      <Text style={styles.recipientBank}>{b.bankName}</Text>
+                      <Text style={styles.recipientCurrency}>Currency: {b.currency}</Text>
+                    </View>
+                    {selectedRecipient?.id === b.id && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )
+            )}
+
+            {selectedRecipient && (
+              <TouchableOpacity style={styles.primaryButton} onPress={() => setStep(3)}>
+                <Text style={styles.primaryButtonText}>Continue</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Step 3: Enter Amount & Payment Method */}
+        {step === 3 && (
+          <View>
+            <TouchableOpacity onPress={() => setStep(2)} style={styles.backLink}>
+              <Text style={styles.backLinkText}>← Change recipient</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.stepTitle}>Enter Amount</Text>
+            <View style={styles.amountInputContainer}>
+              <Text style={styles.currencySymbol}>{userCurrency}</Text>
+              <TextInput
+                style={styles.amountInput}
+                placeholder="0.00"
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+              />
+            </View>
+
+            {amount && selectedRecipient && (
+              <View style={styles.conversionCard}>
+                <Text style={styles.conversionLabel}>Recipient will receive:</Text>
+                <Text style={styles.conversionAmount}>
+                  {selectedRecipient.currency} {convertedAmount.toFixed(2)}
+                </Text>
+                <Text style={styles.conversionRate}>
+                  Exchange rate: 1 {userCurrency} = {(EXCHANGE_RATES[selectedRecipient.currency] / EXCHANGE_RATES[userCurrency]).toFixed(4)} {selectedRecipient.currency}
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.stepTitle}>Payment Method</Text>
+            <TouchableOpacity
+              style={[styles.optionCard, paymentMethod === 'card' && styles.optionCardSelected]}
+              onPress={() => setPaymentMethod('card')}
+            >
+              <Text style={styles.optionEmoji}>💳</Text>
+              <Text style={styles.optionTitle}>Bank Card</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.optionCard, paymentMethod === 'wallet' && styles.optionCardSelected]}
+              onPress={() => setPaymentMethod('wallet')}
+            >
+              <Text style={styles.optionEmoji}>👛</Text>
+              <Text style={styles.optionTitle}>Wallet Balance</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              onPress={handleSendMoney}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  Send {userCurrency} {amount || '0.00'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Transfer History */}
+        <View style={styles.historySection}>
+          <Text style={styles.sectionTitle}>Recent Transfers</Text>
+          {transferHistory.length === 0 ? (
+            <Text style={styles.emptyText}>No transfer history yet</Text>
+          ) : (
+            transferHistory.map((transfer) => (
+              <View key={transfer.id} style={styles.historyItem}>
+                <View style={styles.historyIcon}>
+                  <Text style={styles.historyEmoji}>
+                    {transfer.fromUserId === user.id ? '📤' : '📥'}
+                  </Text>
+                </View>
+                <View style={styles.historyDetails}>
+                  <Text style={styles.historyTitle}>
+                    {transfer.fromUserId === user.id ? 'Sent to' : 'Received from'} {transfer.beneficiaryName || transfer.toUserName || 'Unknown'}
+                  </Text>
+                  <Text style={styles.historyDate}>
+                    {new Date(transfer.createdAt).toLocaleString()}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.historyAmount,
+                  transfer.fromUserId === user.id ? styles.negativeAmount : styles.positiveAmount
+                ]}>
+                  {transfer.fromUserId === user.id ? '-' : '+'}{userCurrency} {transfer.amount?.toFixed(2)}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+// ============= ADD BENEFICIARY SCREEN =============
+const AddBeneficiaryScreen = ({ navigation }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    accountNumber: '',
+    bankName: '',
+    bankCode: '',
+    country: 'US',
+    currency: 'USD'
+  });
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleAddBeneficiary = async () => {
+    if (!formData.name || !formData.accountNumber || !formData.bankName) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/beneficiaries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        Alert.alert('Success', 'Beneficiary added successfully!');
+        navigation('send');
+      } else {
+        Alert.alert('Error', 'Failed to add beneficiary');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectedCountry = COUNTRIES_CURRENCIES.find(c => c.code === formData.country);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation('send')} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add Beneficiary</Text>
+      </View>
+
+      <ScrollView style={styles.formContainer}>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Beneficiary Name *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="John Doe"
+            value={formData.name}
+            onChangeText={(text) => setFormData({ ...formData, name: text })}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Country & Currency *</Text>
+          <TouchableOpacity
+            style={styles.pickerButton}
+            onPress={() => setShowCountryPicker(true)}
+          >
+            <Text style={styles.pickerButtonText}>
+              {selectedCountry.flag} {selectedCountry.name} ({selectedCountry.currency})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Bank Name *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Bank of America"
+            value={formData.bankName}
+            onChangeText={(text) => setFormData({ ...formData, bankName: text })}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Bank Code / Swift Code</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="BOFAUS3N"
+            value={formData.bankCode}
+            onChangeText={(text) => setFormData({ ...formData, bankCode: text })}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Account Number / IBAN *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="1234567890"
+            value={formData.accountNumber}
+            onChangeText={(text) => setFormData({ ...formData, accountNumber: text })}
+            keyboardType="numeric"
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+          onPress={handleAddBeneficiary}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.primaryButtonText}>Add Beneficiary</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Country Picker Modal */}
+      <Modal
+        visible={showCountryPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCountryPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Country</Text>
+              <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={COUNTRIES_CURRENCIES}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.countryItem}
+                  onPress={() => {
+                    setFormData({ ...formData, country: item.code, currency: item.currency });
+                    setShowCountryPicker(false);
+                  }}
+                >
+                  <Text style={styles.countryFlag}>{item.flag}</Text>
+                  <View style={styles.countryInfo}>
+                    <Text style={styles.countryName}>{item.name}</Text>
+                    <Text style={styles.countryCurrency}>{item.currency}</Text>
+                  </View>
+                  {formData.country === item.code && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
+// ============= BENEFICIARIES LIST SCREEN =============
+const BeneficiariesScreen = ({ navigation }) => {
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadBeneficiaries();
+  }, []);
+
+  const loadBeneficiaries = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/beneficiaries`, {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBeneficiaries(data);
+      }
+    } catch (err) {
+      console.error('Failed to load beneficiaries:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBeneficiary = (id) => {
+    Alert.alert(
+      'Delete Beneficiary',
+      'Are you sure you want to delete this beneficiary?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_URL}/beneficiaries/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+              });
+              if (res.ok) {
+                Alert.alert('Success', 'Beneficiary deleted');
+                loadBeneficiaries();
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete beneficiary');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation('home')} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Beneficiaries</Text>
+        <TouchableOpacity onPress={() => navigation('addBeneficiary')}>
+          <Text style={styles.addButtonText}>+ Add</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#667EEA" />
+        </View>
+      ) : beneficiaries.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No Beneficiaries Yet</Text>
+          <Text style={styles.emptyText}>
+            Add beneficiaries to send money quickly
+          </Text>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => navigation('addBeneficiary')}
+          >
+            <Text style={styles.primaryButtonText}>Add First Beneficiary</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={beneficiaries}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContainer}
+          renderItem={({ item }) => (
+            <View style={styles.beneficiaryCard}>
+              <View style={styles.beneficiaryHeader}>
+                <View style={styles.beneficiaryAvatar}>
+                  <Text style={styles.beneficiaryAvatarText}>
+                    {item.name[0].toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.beneficiaryInfo}>
+                  <Text style={styles.beneficiaryName}>{item.name}</Text>
+                  <Text style={styles.beneficiaryBank}>{item.bankName}</Text>
+                  <Text style={styles.beneficiaryAccount}>{item.accountNumber}</Text>
+                  <Text style={styles.beneficiaryCurrency}>
+                    Currency: {item.currency}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.beneficiaryActions}>
+                <TouchableOpacity
+                  style={styles.sendButton}
+                  onPress={() => {
+                    navigation('send');
+                  }}
+                >
+                  <Text style={styles.sendButtonText}>Send Money</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteBeneficiary(item.id)}
+                >
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        />
+      )}
+    </SafeAreaView>
+  );
+};
+
+// ============= RECEIVE MONEY SCREEN =============
+const ReceiveScreen = ({ navigation }) => {
+  const { user } = useAuth();
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation('home')} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Receive Money</Text>
+      </View>
+
+      <ScrollView style={styles.content}>
+        <View style={styles.receiveContainer}>
+          <Text style={styles.receiveTitle}>Share Your Details</Text>
+          <Text style={styles.receiveSubtitle}>
+            Share these details with anyone who wants to send you money
+          </Text>
+
+          <View style={styles.receiveCard}>
+            <View style={styles.qrCodeContainer}>
+              <Text style={styles.qrCodePlaceholder}>📱</Text>
+              <Text style={styles.qrCodeText}>QR Code</Text>
+              <Text style={styles.qrCodeSubtext}>Scan to send money</Text>
+            </View>
+          </View>
+
+          <View style={styles.detailsCard}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Username</Text>
+              <Text style={styles.detailValue}>{user?.username}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Email</Text>
+              <Text style={styles.detailValue}>{user?.email}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Phone</Text>
+              <Text style={styles.detailValue}>{user?.phoneNumber}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Currency</Text>
+              <Text style={styles.detailValue}>{user?.currency || 'USD'}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>Share Details</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+// ============= HISTORY SCREEN =============
+const HistoryScreen = ({ navigation }) => {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all'); // 'all', 'sent', 'received'
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/entries/user/${user.id}/history?limit=100`,
+        { credentials: 'include' }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTransactions(data);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredTransactions = transactions.filter(t => {
+    if (filter === 'sent') return t.amount < 0;
+    if (filter === 'received') return t.amount > 0;
+    return true;
+  });
+
+  const userCurrency = user?.currency || 'USD';
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation('home')} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Transaction History</Text>
+      </View>
+
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
+          onPress={() => setFilter('all')}
+        >
+          <Text style={[styles.filterButtonText, filter === 'all' && styles.filterButtonTextActive]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterButton, filter === 'sent' && styles.filterButtonActive]}
+          onPress={() => setFilter('sent')}
+        >
+          <Text style={[styles.filterButtonText, filter === 'sent' && styles.filterButtonTextActive]}>
+            Sent
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterButton, filter === 'received' && styles.filterButtonActive]}
+          onPress={() => setFilter('received')}
+        >
+          <Text style={[styles.filterButtonText, filter === 'received' && styles.filterButtonTextActive]}>
+            Received
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#667EEA" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredTransactions}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContainer}
+          renderItem={({ item }) => (
+            <View style={styles.historyItem}>
+              <View style={styles.historyIcon}>
+                <Text style={styles.historyEmoji}>{item.amount > 0 ? '📥' : '📤'}</Text>
+              </View>
+              <View style={styles.historyDetails}>
+                <Text style={styles.historyTitle}>
+                  {item.amount > 0 ? 'Received Money' : 'Sent Money'}
+                </Text>
+                <Text style={styles.historyDate}>
+                  {new Date(item.timestamp).toLocaleString()}
+                </Text>
+                <Text style={styles.historyDescription}>
+                  Transfer ID: {item.transferId}
+                </Text>
+              </View>
+              <View style={styles.historyAmountContainer}>
+                <Text style={[
+                  styles.historyAmount,
+                  item.amount > 0 ? styles.positiveAmount : styles.negativeAmount
+                ]}>
+                  {item.amount > 0 ? '+' : ''}{userCurrency} {Math.abs(item.amount).toFixed(2)}
+                </Text>
+                <Text style={styles.historyBalance}>
+                  Balance: {userCurrency} {item.balance.toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No transactions found</Text>
+          }
+        />
+      )}
+    </SafeAreaView>
+  );
+};
+
+// ============= MAIN APP =============
+export default function App() {
+  const [currentScreen, setCurrentScreen] = useState('login');
+
+  const InnerApp = () => {
+    const { user, loading } = useAuth();
+
+    useEffect(() => {
+      if (!loading) {
+        setCurrentScreen(user ? 'home' : 'login');
+      }
+    }, [user, loading]);
+
+    const navigate = (screen) => {
+      setCurrentScreen(screen);
+    };
+
+    if (loading) {
+      return (
+        <View style={[styles.container, styles.centerContent]}>
+          <ActivityIndicator size="large" color="#667EEA" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1 }}>
+        {currentScreen === 'login' && <LoginScreen navigation={navigate} />}
+        {currentScreen === 'register' && <RegisterScreen navigation={navigate} />}
+        {currentScreen === 'home' && <HomeScreen navigation={navigate} />}
+        {currentScreen === 'send' && <SendMoneyScreen navigation={navigate} />}
+        {currentScreen === 'addBeneficiary' && <AddBeneficiaryScreen navigation={navigate} />}
+        {currentScreen === 'beneficiaries' && <BeneficiariesScreen navigation={navigate} />}
+        {currentScreen === 'receive' && <ReceiveScreen navigation={navigate} />}
+        {currentScreen === 'history' && <HistoryScreen navigation={navigate} />}
+      </View>
+    );
+  };
+
+  return (
+    <AuthProvider>
+      <InnerApp />
+    </AuthProvider>
+  );
+}
+
+// ============= STYLES =============
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA'
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#667EEA'
+  },
+  gradientHeader: {
+    backgroundColor: '#667EEA',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30
+  },
+  logoContainer: {
+    alignItems: 'center'
+  },
+  logo: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15
+  },
+  logoText: {
+    fontSize: 40
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 8
+  },
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)'
+  },
+  formContainer: {
+    padding: 20
+  },
+  inputGroup: {
+    marginBottom: 20
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8
+  },
+  input: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16
+  },
+  pickerButton: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 15
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: '#374151'
+  },
+  primaryButton: {
+    backgroundColor: '#667EEA',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 10
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6
+  },
+  primaryButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600'
+  },
+  secondaryButton: {
+    marginTop: 15,
+    alignItems: 'center'
+  },
+  secondaryButtonText: {
+    color: '#667EEA',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB'
+  },
+  backButton: {
+    marginRight: 15
+  },
+  backButtonText: {
+    color: '#667EEA',
+    fontSize: 16,
+    fontWeight: '600'
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937'
+  },
+  addButtonText: {
+    color: '#667EEA',
+    fontSize: 16,
+    fontWeight: '600'
+  },
+  homeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#667EEA',
+    paddingTop: 40
+  },
+  welcomeText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14
+  },
+  userName: {
+    color: '#FFF',
+    fontSize: 24,
+    fontWeight: 'bold'
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8
+  },
+  logoutButtonText: {
+    color: '#FFF',
+    fontWeight: '600'
+  },
+  balanceCard: {
+    backgroundColor: '#FFF',
+    margin: 20,
+    padding: 25,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5
+  },
+  balanceLabel: {
+    color: '#6B7280',
+    fontSize: 14,
+    marginBottom: 8
+  },
+  balanceAmount: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 20
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  cardButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 10,
+    marginHorizontal: 5,
+    alignItems: 'center'
+  },
+  cardButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151'
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    marginBottom: 20
+  },
+  actionButton: {
+    alignItems: 'center'
+  },
+  actionIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 8
+  },
+  actionEmoji: {
+    fontSize: 28
+  },
+  actionText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '600',
+    marginTop: 5
+  },
+  section: {
+    padding: 20
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 15
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15
+  },
+  transactionItem: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    alignItems: 'center'
+  },
+  transactionIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  transactionDetails: {
+    flex: 1
+  },
+  transactionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4
+  },
+  transactionDate: {
+    fontSize: 13,
+    color: '#9CA3AF'
+  },
+  transactionAmount: {
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  positiveAmount: {
+    color: '#10B981'
+  },
+  negativeAmount: {
+    color: '#EF4444'
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 20
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 10
+  },
+  content: {
+    flex: 1,
+    padding: 20
+  },
+  stepTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 20
+  },
+  optionCard: {
+    backgroundColor: '#FFF',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center'
+  },
+  optionCardSelected: {
+    borderColor: '#667EEA',
+    backgroundColor: '#EEF2FF'
+  },
+  optionEmoji: {
+    fontSize: 40,
+    marginBottom: 10
+  },
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 5
+  },
+  optionSubtitle: {
+    fontSize: 14,
+    color: '#6B7280'
+  },
+  backLink: {
+    marginBottom: 20
+  },
+  backLinkText: {
+    color: '#667EEA',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  recipientCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E7EB'
+  },
+  recipientCardSelected: {
+    borderColor: '#667EEA',
+    backgroundColor: '#EEF2FF'
+  },
+  recipientAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#667EEA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  recipientAvatarText: {
+    color: '#FFF',
+    fontSize: 20,
+    fontWeight: 'bold'
+  },
+  recipientInfo: {
+    flex: 1
+  },
+  recipientName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4
+  },
+  recipientEmail: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 2
+  },
+  recipientBank: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginBottom: 2
+  },
+  recipientCurrency: {
+    fontSize: 12,
+    color: '#667EEA',
+    fontWeight: '600',
+    marginTop: 2
+  },
+  checkmark: {
+    fontSize: 24,
+    color: '#667EEA',
+    fontWeight: 'bold'
+  },
+  amountInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#667EEA',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20
+  },
+  currencySymbol: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#667EEA',
+    marginRight: 10
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1F2937'
+  },
+  conversionCard: {
+    backgroundColor: '#EEF2FF',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#667EEA'
+  },
+  conversionLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8
+  },
+  conversionAmount: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#667EEA',
+    marginBottom: 8
+  },
+  conversionRate: {
+    fontSize: 12,
+    color: '#9CA3AF'
+  },
+  historySection: {
+    marginTop: 30,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB'
+  },
+  listContainer: {
+    padding: 20
+  },
+  historyItem: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2
+  },
+  historyIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  historyEmoji: {
+    fontSize: 24
+  },
+  historyDetails: {
+    flex: 1
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4
+  },
+  historyDate: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 4
+  },
+  historyDescription: {
+    fontSize: 12,
+    color: '#6B7280'
+  },
+  historyAmountContainer: {
+    alignItems: 'flex-end'
+  },
+  historyAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4
+  },
+  historyBalance: {
+    fontSize: 12,
+    color: '#6B7280'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end'
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%'
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB'
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937'
+  },
+  modalClose: {
+    fontSize: 24,
+    color: '#9CA3AF'
+  },
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6'
+  },
+  countryFlag: {
+    fontSize: 32,
+    marginRight: 15
+  },
+  countryInfo: {
+    flex: 1
+  },
+  countryName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4
+  },
+  countryCurrency: {
+    fontSize: 14,
+    color: '#6B7280'
+  },
+  beneficiaryCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  beneficiaryHeader: {
+    flexDirection: 'row',
+    marginBottom: 15
+  },
+  beneficiaryAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#667EEA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15
+  },
+  beneficiaryAvatarText: {
+    color: '#FFF',
+    fontSize: 24,
+    fontWeight: 'bold'
+  },
+  beneficiaryInfo: {
+    flex: 1
+  },
+  beneficiaryName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4
+  },
+  beneficiaryBank: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 2
+  },
+  beneficiaryAccount: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginBottom: 4
+  },
+  beneficiaryCurrency: {
+    fontSize: 12,
+    color: '#667EEA',
+    fontWeight: '600'
+  },
+  beneficiaryActions: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  sendButton: {
+    flex: 1,
+    backgroundColor: '#667EEA',
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  sendButtonText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 14
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  deleteButtonText: {
+    color: '#EF4444',
+    fontWeight: '600',
+    fontSize: 14
+  },
+  receiveContainer: {
+    padding: 20
+  },
+  receiveTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 10,
+    textAlign: 'center'
+  },
+  receiveSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 30
+  },
+  receiveCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5
+  },
+  qrCodeContainer: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  qrCodePlaceholder: {
+    fontSize: 80,
+    marginBottom: 10
+  },
+  qrCodeText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 5
+  },
+  qrCodeSubtext: {
+    fontSize: 14,
+    color: '#6B7280'
+  },
+  detailsCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6'
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500'
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '600'
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 10
+  },
+  filterButton: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
+  },
+  filterButtonActive: {
+    backgroundColor: '#667EEA',
+    borderColor: '#667EEA'
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '600'
+  },
+  filterButtonTextActive: {
+    color: '#FFF'
+  }
+});
